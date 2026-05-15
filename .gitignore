@@ -1,0 +1,36 @@
+# Dependencies & build
+node_modules/
+dist/
+.vite/
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+*.local
+.npmrc
+credentials.json
+secrets.json
+*.pem
+*.key
+*.p12
+*.crt
+
+# Local conversation / transcript samples (may contain API keys, paths, code)
+*.jsonl
+samples/
+fixtures/
+
+# Logs & OS
+*.log
+logs/
+.DS_Store
+Thumbs.db
+
+# Editor (optional local settings)
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test coverage
+coverage/
