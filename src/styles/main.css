@@ -31,6 +31,21 @@
     --t-user-bubble: 37 99 235;
   }
 
+  /* 豆沙绿护眼：经典 #C7EDCC，柔和对比、偏暖文字，减轻长时间阅读疲劳 */
+  html.eye {
+    color-scheme: light;
+    --t-bg: 199 237 204;
+    --t-bg-raised: 214 245 218;
+    --t-bg-overlay: 204 240 209;
+    --t-text: 45 62 48;
+    --t-text-muted: 75 98 80;
+    --t-border: 160 200 168;
+    --t-code-bg: 186 228 192;
+    --t-pre-bg: 175 220 182;
+    --t-scrollbar: 140 180 148;
+    --t-user-bubble: 37 99 235;
+  }
+
   html {
     transition: background-color 0.35s ease, color 0.35s ease;
   }
@@ -62,6 +77,11 @@
   html.dark .search-highlight {
     background-color: rgb(253 224 71 / 0.55);
     color: rgb(15 23 42);
+  }
+
+  html.eye .search-highlight {
+    background-color: rgb(253 230 138 / 0.75);
+    color: rgb(45 62 48);
   }
 
   .search-highlight-active {
@@ -142,6 +162,10 @@
 
   html.dark .prose-chat :not(pre) > code {
     @apply text-amber-200/90;
+  }
+
+  html.eye .prose-chat :not(pre) > code {
+    color: rgb(52 88 58);
   }
 
   .hljs {

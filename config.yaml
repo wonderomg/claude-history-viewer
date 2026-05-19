@@ -1,0 +1,7 @@
+# 直接修改本文件即可；用户级覆盖：~/.claudecode-history-viewer/config.yaml
+port: 3747
+host: 127.0.0.1
+# 界面语言，与「设置 → 语言」一致：zh | en（用户在页面改过语言后以浏览器缓存为准）
+language: en
+# 界面主题：light | dark | eye（护眼豆沙绿，与设置/顶栏主题一致）
+theme: dark

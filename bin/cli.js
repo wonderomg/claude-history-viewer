@@ -4,6 +4,7 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { resolveServerConfig, printConfigHelp } from '../server/load-config.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -17,9 +18,27 @@ if (!fs.existsSync(distIndex)) {
   process.exit(1)
 }
 
+let config
+try {
+  config = resolveServerConfig(process.argv)
+} catch (err) {
+  console.error(`[error] ${err.message}`)
+  process.exit(1)
+}
+
+if (config.help) {
+  printConfigHelp()
+  process.exit(0)
+}
+
 const child = spawn(process.execPath, [server], {
   cwd: root,
-  env: { ...process.env, NODE_ENV: 'production' },
+  env: {
+    ...process.env,
+    NODE_ENV: 'production',
+    PORT: String(config.port),
+    HOST: config.host,
+  },
   stdio: 'inherit',
 })
 

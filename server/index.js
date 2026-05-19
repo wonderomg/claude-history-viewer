@@ -13,10 +13,30 @@ import { parseTranscript, searchInTranscript } from './parser.js'
 import { parseCursorTranscript, searchInCursorTranscript } from './parser-cursor.js'
 import { messagesToMarkdown } from './export.js'
 import { openBrowser } from './open-browser.js'
+import {
+  resolveServerConfig,
+  printConfigHelp,
+  resolveLanguageFromConfig,
+  resolveThemeFromConfig,
+} from './load-config.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const PORT = process.env.PORT || 3747
-const HOST = process.env.HOST || '127.0.0.1'
+
+let serverConfig
+try {
+  serverConfig = resolveServerConfig()
+} catch (err) {
+  console.error(`[error] ${err.message}`)
+  process.exit(1)
+}
+
+if (serverConfig.help) {
+  printConfigHelp()
+  process.exit(0)
+}
+
+const PORT = serverConfig.port
+const HOST = serverConfig.host
 const isProd = process.env.NODE_ENV === 'production'
 
 const app = express()
@@ -38,6 +58,16 @@ function searchSessionFile(session, query) {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, claudeDir: getClaudeDir(), cursorDir: getCursorDir() })
+})
+
+app.get('/api/config', (_req, res) => {
+  const configLocale = resolveLanguageFromConfig()
+  const configTheme = resolveThemeFromConfig()
+  res.json({
+    locale: configLocale ?? 'en',
+    language: configLocale ?? 'en',
+    theme: configTheme ?? 'light',
+  })
 })
 
 app.get('/api/sessions', (req, res) => {
@@ -192,7 +222,9 @@ const server = app.listen(PORT, HOST, () => {
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[error] Port ${PORT} is already in use (${HOST}:${PORT}).`)
-    console.error('  Stop the other process, or run: PORT=3748 npm start')
+    console.error('  Stop the other process, or use another port:')
+    console.error('    claudecode-history-viewer --port 3748')
+    console.error('    PORT=3748 npm start')
     process.exit(1)
   }
   throw err

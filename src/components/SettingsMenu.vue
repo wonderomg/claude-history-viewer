@@ -1,8 +1,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useLocale } from '../composables/useLocale.js'
+import { useTheme } from '../composables/useTheme.js'
 
 const { t, toggleLocale, languageSwitchLabel } = useLocale()
+const { theme, setTheme, THEME_IDS } = useTheme()
+
+const themeName = (id) => t(`theme.${id}`)
 const open = ref(false)
 const root = ref(null)
 
@@ -57,6 +61,23 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         @click="toggleLocale(); open = false"
       >
         {{ languageSwitchLabel }}
+      </button>
+
+      <p class="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-t-muted">
+        {{ t('settings.theme') }}
+      </p>
+      <button
+        v-for="id in THEME_IDS"
+        :key="id"
+        type="button"
+        role="menuitemradio"
+        :aria-checked="theme === id"
+        class="w-full text-left px-2 py-2 text-sm rounded-md transition-colors flex items-center justify-between gap-2"
+        :class="theme === id ? 'bg-t-overlay text-t-text font-medium' : 'text-t-text hover:bg-t-overlay'"
+        @click="setTheme(id); open = false"
+      >
+        <span>{{ themeName(id) }}</span>
+        <span v-if="theme === id" class="text-accent text-xs" aria-hidden="true">✓</span>
       </button>
     </div>
   </div>

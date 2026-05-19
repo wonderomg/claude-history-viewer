@@ -2,46 +2,52 @@
 
 # claude-history-viewer
 
-**轻量级本地 Web 查看器，用于浏览 Claude Code 与 Cursor 会话历史。**
+**A lightweight, local web viewer for Claude Code and Cursor conversation history.**
 
-从 `~/.claude` 与 `~/.cursor` 读取对话记录，支持浏览、搜索与导出 — **完全离线**，无云端、无遥测。
+Browse, search, and export sessions from `~/.claude` and `~/.cursor` — **100% offline**, no cloud, no telemetry.
 
 [![Stars](https://img.shields.io/github/stars/wonderomg/claude-history-viewer?style=flat&color=yellow)](https://github.com/wonderomg/claude-history-viewer/stargazers)
 ![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-**语言**: [中文 (简体)](README.md) | [English](README.en-US.md)
+**Languages**: English | [中文 (简体)](README.zh-CN.md)
 
 </div>
 
 <p align="center">
-  <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer.png" />
+  <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-en.jpg" />
 </p>
 
-## 快速开始
+## Quick Start
 
-需要 **Node.js 18+**。本机可选已有 `~/.claude` / `~/.cursor` 历史数据。
+Requires **Node.js 18+**. Optional: existing `~/.claude` / `~/.cursor` history on your machine.
 
-### 从 npm 使用（推荐）
+### Use from npm (recommended)
 
 ```bash
 npx -y claudecode-history-viewer
 ```
 
-`npx` 首次运行会询问是否安装依赖，加 `-y` 可跳过确认；装过后再次执行通常不再提示。
+`npx` may ask to install the package on first run; `-y` skips the prompt. Later runs often skip it once cached.
 
-或全局安装后执行（无二次确认）：
+Or install globally (no prompt):
 
 ```bash
 npm install -g claudecode-history-viewer
 claudecode-history-viewer
 ```
 
-浏览器访问 **http://localhost:3747**
+Open **http://localhost:3747** (port is configurable — see **Configuration**)
 
-禁用自动打开：`NO_OPEN_BROWSER=1 npx -y claudecode-history-viewer`
+Disable auto-open: `NO_OPEN_BROWSER=1 npx -y claudecode-history-viewer`
 
-### 从 GitHub 克隆（开发 / 改代码）
+Custom port:
+
+```bash
+npx -y claudecode-history-viewer --port 3800
+```
+
+### Clone from GitHub (development)
 
 ```bash
 git clone https://github.com/wonderomg/claude-history-viewer.git
@@ -50,84 +56,109 @@ npm install
 npm run build && npm start
 ```
 
-开发调试（热更新）：在源码目录执行 `npm run dev` → http://localhost:5173
+For development (hot reload): `npm run dev` in the repo → http://localhost:5173
 
 ---
 
-## 免责声明
+## Disclaimer
 
-独立开源项目，与 **Anthropic**、**Cursor** 无官方关系；相关名称为各自商标。仅只读本机历史文件。
-
----
-
-## 功能
-
-| 功能 | 说明 |
-|------|------|
-| 双来源 | 侧栏 **全部 / Claude Code / Cursor**，搜索随来源过滤 |
-| 会话列表 | 按项目筛选、Sub-agent 树形展开 |
-| 对话渲染 | 用户 / Markdown / Thinking / Tool Call & Result |
-| 搜索 | 跨会话 + 会话内（高亮、`上一处/下一处`、回车定位） |
-| 其他 | 原始 JSONL、导出 Markdown、深浅主题、中/英文界面 |
+Independent open-source project, **not affiliated with Anthropic or Cursor**. Trademark names belong to their owners. Read-only access to local history files only.
 
 ---
 
-## 数据路径
+## Features
 
-| 来源 | 路径 | 内容 |
-|------|------|------|
-| Claude Code | `~/.claude/sessions/*.json` | 会话元数据 |
-| Claude Code | `~/.claude/projects/{slug}/{sessionId}.jsonl` | 主对话 |
+| Feature | Description |
+|---------|-------------|
+| Dual source | Sidebar **All / Claude Code / Cursor**; search follows source |
+| Sessions | Filter by project, expandable sub-agents |
+| Chat UI | User / Markdown / Thinking / tool calls & results |
+| Search | Global + in-session (highlight, prev/next, Enter to jump) |
+| Extras | Raw JSONL, Markdown export, light/dark/eye-care themes, EN/中文 UI |
+
+---
+
+## Data paths
+
+| Source | Path | Content |
+|--------|------|---------|
+| Claude Code | `~/.claude/sessions/*.json` | Session metadata |
+| Claude Code | `~/.claude/projects/{slug}/{sessionId}.jsonl` | Main conversation |
 | Claude Code | `.../{sessionId}/subagents/*.jsonl` | Sub-agent |
-| Cursor | `~/.cursor/projects/{slug}/agent-transcripts/{id}/{id}.jsonl` | Agent 对话 |
+| Cursor | `~/.cursor/projects/{slug}/agent-transcripts/{id}/{id}.jsonl` | Agent transcript |
 | Cursor | `.../subagents/*.jsonl` | Sub-agent |
 
-项目 slug（如 `-Users-you-code-project`）会在界面中还原为可读路径。
+Project slugs like `-Users-you-code-project` are decoded to readable paths in the UI.
 
 ---
 
-## 配置
+## Configuration
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
-| `HOST` | `127.0.0.1` | API 监听地址 |
-| `PORT` | `3747` | API / 生产静态服务端口 |
-| `VITE_PORT` | `5173` | Vite 开发端口 |
-| `NO_OPEN_BROWSER` | — | `1` 禁用自动打开浏览器 |
+### Port (highest priority first)
 
----
+1. CLI `--port` / `-p`
+2. `PORT` environment variable
+3. `config.yaml` (project directory overrides user home)
+4. Default `3747`
 
-## 本地 API
+```bash
+claudecode-history-viewer --port 3800
+npm start -- --port 3800
+```
 
-`GET /api/health` · `GET /api/sessions?source=` · `GET /api/sessions/:id` · `GET /api/sessions/:id/search?q=` · `GET /api/sessions/:id/raw` · `GET /api/sessions/:id/export` · `GET /api/search?q=&source=`
+Edit **`config.yaml`** in the project root (the npm package ships one too — works with `npx` from any directory). Optional user override: `~/.claudecode-history-viewer/config.yaml`.
 
----
+```yaml
+port: 3747
+host: 127.0.0.1
+language: en   # UI language: zh | en (Settings → Language)
+theme: eye     # UI theme: light | dark | eye (eye-care green)
+```
 
-## 隐私与安全
+`language` / `theme` in `config.yaml` apply on each start until you change them in **Settings** or the header theme button (then the browser remembers your choice). To re-apply config defaults, clear site data for this host or remove `claude-history-viewer-locale-user` / `claude-history-viewer-theme-user` in DevTools → Application → Local Storage.
 
-- 仅读取 `~/.claude`、`~/.cursor`，不上传云端
-- 对话中可能含密钥与内部信息，界面会如实展示
-- API 无鉴权，默认仅本机；勿暴露到不可信网络
+### Environment variables
 
----
-
-## 常见问题
-
-| 问题 | 处理 |
-|------|------|
-| 无法连接后端 | 确认已运行 `npx -y claudecode-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
-| 列表为空 | 确认对应目录存在且已有工具产生的历史 |
-| 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
-
----
-
-## 局限性
-
-仅支持 Claude Code 与 Cursor；Web 界面；无 Token 统计、实时监听、会话增删改。
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `127.0.0.1` | API bind address (also supported in config.yaml) |
+| `PORT` | `3747` | API / production static server |
+| `VITE_PORT` | `5173` | Vite dev port |
+| `NO_OPEN_BROWSER` | — | `1` to skip opening browser |
 
 ---
 
-## 许可证
+## Local API
+
+`GET /api/health` · `GET /api/config` · `GET /api/sessions?source=` · `GET /api/sessions/:id` · `GET /api/sessions/:id/search?q=` · `GET /api/sessions/:id/raw` · `GET /api/sessions/:id/export` · `GET /api/search?q=&source=`
+
+---
+
+## Privacy & security
+
+- Reads `~/.claude` and `~/.cursor` only; nothing uploaded
+- Chats may contain secrets; the viewer shows them as-is
+- No auth; bound to localhost by default — do not expose to untrusted networks
+
+---
+
+## FAQ
+
+| Issue | Fix |
+|-------|-----|
+| Cannot connect to backend | Run `npx -y claudecode-history-viewer` or `npm start`; ensure port `3747` is free |
+| Empty session list | Ensure history dirs exist and tools have written data |
+| Search/highlight off | Press **Enter** in in-session search, or use ◀ ▶ after render |
+
+---
+
+## Limitations
+
+Claude Code and Cursor only; web UI; no token analytics, live file watch, or session edit/delete.
+
+---
+
+## License
 
 [MIT License](LICENSE)
 
@@ -135,7 +166,7 @@ npm run build && npm start
 
 <div align="center">
 
-如果这个项目对您有帮助，请给它一个星标！
+If this project helps you, please give it a star!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=wonderomg/claude-history-viewer&type=Date)](https://star-history.com/#wonderomg/claude-history-viewer&Date)
 

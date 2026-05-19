@@ -2,6 +2,9 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import './styles/main.css'
 import { initHljsTheme } from './utils/hljs-theme.js'
+import { initAppSettings } from './composables/initAppSettings.js'
 
-initHljsTheme()
-createApp(App).mount('#app')
+initAppSettings().then(() => {
+  initHljsTheme()
+  createApp(App).mount('#app')
+})

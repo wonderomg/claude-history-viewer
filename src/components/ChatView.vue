@@ -5,7 +5,7 @@ import RawJsonView from './RawJsonView.vue'
 import { formatTime } from '../utils/format.js'
 import {
   scheduleScrollToMatchIndex,
-  scheduleScrollToMessageHighlight,
+  scheduleScrollToMessageInContainer,
   setActiveSearchMark,
 } from '../utils/highlight.js'
 import { useLocale } from '../composables/useLocale.js'
@@ -71,7 +71,7 @@ function goToMatch(index) {
 
   currentMatchIndex.value = i
   highlightId.value = match.messageId
-  scheduleScrollToMatchIndex(chatRef.value, i)
+  scheduleScrollToMatchIndex(chatRef.value, i, match.messageId)
   return true
 }
 
@@ -86,17 +86,21 @@ function goToNextMatch() {
 }
 
 function scrollToMessage(id) {
-  if (!id) return
+  if (!id || !chatRef.value) return
   highlightId.value = id
-  scheduleScrollToMessageHighlight(id)
+  scheduleScrollToMessageInContainer(chatRef.value, id)
 }
 
-function scrollToHitMessage(messageId) {
+async function scrollToHitMessage(messageId) {
+  if (!messageId || !chatRef.value) return
+  highlightId.value = messageId
   const idx = props.searchMatches.findIndex((m) => m.messageId === messageId)
+  await nextTick()
   if (idx >= 0) {
-    goToMatch(idx)
+    currentMatchIndex.value = idx
+    scheduleScrollToMatchIndex(chatRef.value, idx, messageId)
   } else {
-    scrollToMessage(messageId)
+    scheduleScrollToMessageInContainer(chatRef.value, messageId)
   }
 }
 
@@ -111,7 +115,7 @@ watch(
     } else {
       highlightId.value = id
       await nextTick()
-      scheduleScrollToMessageHighlight(id)
+      if (chatRef.value) scheduleScrollToMessageInContainer(chatRef.value, id)
     }
     emit('focusHandled')
   }
@@ -379,7 +383,7 @@ const sessionLabel = computed(() => {
 
     <RawJsonView v-else-if="viewMode === 'raw'" :session-id="session.id" class="flex-1 min-h-0" />
 
-    <div v-else ref="chatRef" class="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+    <div v-else ref="chatRef" data-chat-scroll class="flex-1 overflow-y-auto px-4 md:px-8 py-6">
       <MessageBubble
         v-for="msg in messages"
         :key="msg.id"

@@ -54,10 +54,15 @@ export const messages = {
     theme: {
       toLight: '切换为浅色主题',
       toDark: '切换为深色主题',
+      toEye: '切换为护眼主题',
+      light: '浅色',
+      dark: '深色',
+      eye: '护眼',
     },
     settings: {
       title: '设置',
       language: '语言',
+      theme: '主题',
       switchToEn: 'English',
       switchToZh: '中文',
     },
@@ -120,10 +125,15 @@ export const messages = {
     theme: {
       toLight: 'Switch to light theme',
       toDark: 'Switch to dark theme',
+      toEye: 'Switch to eye-care theme',
+      light: 'Light',
+      dark: 'Dark',
+      eye: 'Eye care',
     },
     settings: {
       title: 'Settings',
       language: 'Language',
+      theme: 'Theme',
       switchToEn: 'English',
       switchToZh: '中文',
     },

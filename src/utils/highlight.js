@@ -88,6 +88,25 @@ export function getSearchMarks(container) {
   return [...root.querySelectorAll('mark.search-highlight')]
 }
 
+/** 在指定滚动容器内将元素滚入视口 */
+export function scrollElementInContainer(element, container, options = {}) {
+  if (!element || !container) return false
+  const behavior = options.behavior ?? 'smooth'
+  const block = options.block ?? 'center'
+  const elementRect = element.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  const elementHeight = elementRect.height
+  const containerHeight = container.clientHeight
+  let top = elementRect.top - containerRect.top + container.scrollTop
+  if (block === 'center') {
+    top -= containerHeight / 2 - elementHeight / 2
+  } else if (block === 'start') {
+    top -= 12
+  }
+  container.scrollTo({ top: Math.max(0, top), behavior })
+  return true
+}
+
 /** 激活第 index 个高亮并滚动到视口 */
 export function setActiveSearchMark(container, index) {
   const marks = getSearchMarks(container)
@@ -97,39 +116,71 @@ export function setActiveSearchMark(container, index) {
   if (index < 0) return false
   const target = marks[index]
   if (!target) return false
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  scrollElementInContainer(target, container, { block: 'center' })
   return true
+}
+
+/** 等待高亮渲染后定位到第 matchIndex 个出现位置 */
+export function scheduleScrollToMatchIndex(container, matchIndex, messageId, maxAttempts = 80) {
+  let attempts = 0
+  const tryScroll = () => {
+    if (setActiveSearchMark(container, matchIndex)) return
+    if (messageId && container) {
+      const msgEl = document.getElementById('msg-' + messageId)
+      if (msgEl) scrollElementInContainer(msgEl, container, { block: 'center' })
+    }
+    if (++attempts < maxAttempts) requestAnimationFrame(tryScroll)
+  }
+  requestAnimationFrame(() => requestAnimationFrame(tryScroll))
+}
+
+/** 等待高亮渲染完成后滚动到消息内首个高亮（或消息块） */
+export function scheduleScrollToMessageInContainer(container, messageId, maxAttempts = 80) {
+  let attempts = 0
+  const tryScroll = () => {
+    const msgEl = document.getElementById('msg-' + messageId)
+    if (!msgEl || !container) {
+      if (++attempts < maxAttempts) requestAnimationFrame(tryScroll)
+      return
+    }
+    const marksInMsg = [...msgEl.querySelectorAll('mark.search-highlight')]
+    if (marksInMsg.length > 0) {
+      const allMarks = getSearchMarks(container)
+      const globalIdx = allMarks.indexOf(marksInMsg[0])
+      if (globalIdx >= 0) {
+        setActiveSearchMark(container, globalIdx)
+        return
+      }
+    }
+    scrollElementInContainer(msgEl, container, { block: 'center' })
+    if (++attempts < maxAttempts) requestAnimationFrame(tryScroll)
+  }
+  requestAnimationFrame(() => requestAnimationFrame(tryScroll))
+}
+
+/** @deprecated 使用 scheduleScrollToMessageInContainer(container, messageId) */
+export function scheduleScrollToMessageHighlight(messageId, maxAttempts = 80) {
+  const container = document.querySelector('[data-chat-scroll]')
+  scheduleScrollToMessageInContainer(container, messageId, maxAttempts)
 }
 
 /** 滚动到消息内首个高亮，若无 mark 则滚到消息块 */
 export function scrollToMessageHighlight(messageId, options = {}) {
   const root = document.getElementById('msg-' + messageId)
   if (!root) return false
+  const container = options.container
   const mark = root.querySelector('mark.search-highlight')
   const target = mark || root
+  if (container) {
+    scrollElementInContainer(target, container, {
+      behavior: options.behavior ?? 'smooth',
+      block: options.block ?? 'center',
+    })
+    return true
+  }
   target.scrollIntoView({
     behavior: options.behavior ?? 'smooth',
     block: options.block ?? 'center',
   })
   return true
-}
-
-/** 等待高亮渲染后定位到第 matchIndex 个出现位置 */
-export function scheduleScrollToMatchIndex(container, matchIndex, maxAttempts = 40) {
-  let attempts = 0
-  const tryScroll = () => {
-    if (setActiveSearchMark(container, matchIndex)) return
-    if (++attempts < maxAttempts) requestAnimationFrame(tryScroll)
-  }
-  requestAnimationFrame(() => requestAnimationFrame(tryScroll))
-}
-
-/** 等待 Markdown 等高亮渲染完成后滚动到消息首个高亮 */
-export function scheduleScrollToMessageHighlight(messageId, maxAttempts = 30) {
-  let attempts = 0
-  const tryScroll = () => {
-    if (scrollToMessageHighlight(messageId)) return
-    if (++attempts < maxAttempts) requestAnimationFrame(tryScroll)
-  }
-  requestAnimationFrame(() => requestAnimationFrame(tryScroll))
 }

@@ -3,6 +3,7 @@ import lightUrl from 'highlight.js/styles/github.css?url'
 
 let linkEl = null
 
+/** @param {'light' | 'dark' | 'eye'} theme */
 export function applyHljsTheme(theme) {
   if (!linkEl) {
     linkEl = document.createElement('link')
@@ -14,9 +15,10 @@ export function applyHljsTheme(theme) {
 }
 
 export function initHljsTheme() {
-  const isDark = document.documentElement.classList.contains('dark')
-  applyHljsTheme(isDark ? 'dark' : 'light')
+  const theme = document.documentElement.dataset.theme || 'light'
+  applyHljsTheme(theme === 'dark' ? 'dark' : 'light')
   window.addEventListener('theme-change', (e) => {
-    applyHljsTheme(e.detail)
+    const next = e.detail === 'dark' ? 'dark' : 'light'
+    applyHljsTheme(next)
   })
 }
