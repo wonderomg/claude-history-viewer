@@ -37,7 +37,7 @@ npm install -g claudecode-history-viewer
 claudecode-history-viewer
 ```
 
-浏览器访问 **http://localhost:3747**（端口可自定义，见下方「配置」）
+浏览器访问 `http://localhost:3747`（端口可自定义，见下方「配置」）
 
 禁用自动打开：`NO_OPEN_BROWSER=1 npx -y claudecode-history-viewer`
 
