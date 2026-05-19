@@ -1,6 +1,6 @@
 {
-  "name": "claude-history-viewer",
-  "version": "1.0.0",
+  "name": "claudecode-history-viewer",
+  "version": "1.0.1",
   "description": "Local web viewer for Claude Code and Cursor conversation history",
   "license": "MIT",
   "author": "wonderomg",
@@ -21,11 +21,24 @@
     "viewer"
   ],
   "type": "module",
+  "bin": {
+    "claudecode-history-viewer": "bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "server",
+    "index.html"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"node server/index.js\" \"vite\"",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node server/index.js"
+    "start": "NODE_ENV=production node server/index.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "express": "^4.21.2",

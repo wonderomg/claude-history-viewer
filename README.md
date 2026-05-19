@@ -22,6 +22,23 @@
 
 需要 **Node.js 18+**。本机可选已有 `~/.claude` / `~/.cursor` 历史数据。
 
+### 从 npm 使用（推荐）
+
+```bash
+npx claudecode-history-viewer
+```
+
+或全局安装后执行：
+
+```bash
+npm install -g claudecode-history-viewer
+claudecode-history-viewer
+```
+
+浏览器访问 **http://localhost:3747**。禁用自动打开：`NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
+
+### 从 GitHub 克隆（开发 / 改代码）
+
 ```bash
 git clone https://github.com/wonderomg/claude-history-viewer.git
 cd claude-history-viewer
@@ -29,11 +46,7 @@ npm install
 npm run build && npm start
 ```
 
-浏览器访问 **http://localhost:3747**
-
-启动后会尝试自动打开；禁用：`NO_OPEN_BROWSER=1 npm start`。
-
-开发调试（热更新）：`npm run dev` → http://localhost:5173
+开发调试（热更新）：在源码目录执行 `npm run dev` → http://localhost:5173
 
 ---
 
@@ -98,7 +111,7 @@ npm run build && npm start
 
 | 问题 | 处理 |
 |------|------|
-| 无法连接后端 | 确认已执行 `npm run build && npm start`，端口 `3747` 未被占用 |
+| 无法连接后端 | 确认已运行 `npx claudecode-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
 | 列表为空 | 确认对应目录存在且已有工具产生的历史 |
 | 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
 

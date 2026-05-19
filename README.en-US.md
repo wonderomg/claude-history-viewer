@@ -22,6 +22,23 @@ Browse, search, and export sessions from `~/.claude` and `~/.cursor` — **100% 
 
 Requires **Node.js 18+**. Optional: existing `~/.claude` / `~/.cursor` history on your machine.
 
+### Use from npm (recommended)
+
+```bash
+npx claudecode-history-viewer
+```
+
+Or install globally:
+
+```bash
+npm install -g claudecode-history-viewer
+claudecode-history-viewer
+```
+
+Open **http://localhost:3747**. Disable auto-open: `NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
+
+### Clone from GitHub (development)
+
 ```bash
 git clone https://github.com/wonderomg/claude-history-viewer.git
 cd claude-history-viewer
@@ -29,11 +46,7 @@ npm install
 npm run build && npm start
 ```
 
-Open **http://localhost:3747**
-
-Auto-open on start; disable: `NO_OPEN_BROWSER=1 npm start`.
-
-For development (hot reload): `npm run dev` → http://localhost:5173
+For development (hot reload): `npm run dev` in the repo → http://localhost:5173
 
 ---
 
@@ -98,7 +111,7 @@ Project slugs like `-Users-you-code-project` are decoded to readable paths in th
 
 | Issue | Fix |
 |-------|-----|
-| Cannot connect to backend | Run `npm run build && npm start`; ensure port `3747` is free |
+| Cannot connect to backend | Run `npx claudecode-history-viewer` or `npm start`; ensure port `3747` is free |
 | Empty session list | Ensure history dirs exist and tools have written data |
 | Search/highlight off | Press **Enter** in in-session search, or use ◀ ▶ after render |
 
