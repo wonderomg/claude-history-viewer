@@ -25,10 +25,12 @@ Requires **Node.js 18+**. Optional: existing `~/.claude` / `~/.cursor` history o
 ### Use from npm (recommended)
 
 ```bash
-npx claudecode-history-viewer
+npx -y claudecode-history-viewer
 ```
 
-Or install globally:
+`npx` may ask to install the package on first run; `-y` skips the prompt. Later runs often skip it once cached.
+
+Or install globally (no prompt):
 
 ```bash
 npm install -g claudecode-history-viewer
@@ -37,7 +39,7 @@ claudecode-history-viewer
 
 Open **http://localhost:3747**
 
-Disable auto-open: `NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
+Disable auto-open: `NO_OPEN_BROWSER=1 npx -y claudecode-history-viewer`
 
 ### Clone from GitHub (development)
 
@@ -113,7 +115,7 @@ Project slugs like `-Users-you-code-project` are decoded to readable paths in th
 
 | Issue | Fix |
 |-------|-----|
-| Cannot connect to backend | Run `npx claudecode-history-viewer` or `npm start`; ensure port `3747` is free |
+| Cannot connect to backend | Run `npx -y claudecode-history-viewer` or `npm start`; ensure port `3747` is free |
 | Empty session list | Ensure history dirs exist and tools have written data |
 | Search/highlight off | Press **Enter** in in-session search, or use ◀ ▶ after render |
 

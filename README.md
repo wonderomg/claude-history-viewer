@@ -25,10 +25,12 @@
 ### 从 npm 使用（推荐）
 
 ```bash
-npx claudecode-history-viewer
+npx -y claudecode-history-viewer
 ```
 
-或全局安装后执行：
+`npx` 首次运行会询问是否安装依赖，加 `-y` 可跳过确认；装过后再次执行通常不再提示。
+
+或全局安装后执行（无二次确认）：
 
 ```bash
 npm install -g claudecode-history-viewer
@@ -37,7 +39,7 @@ claudecode-history-viewer
 
 浏览器访问 **http://localhost:3747**
 
-禁用自动打开：`NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
+禁用自动打开：`NO_OPEN_BROWSER=1 npx -y claudecode-history-viewer`
 
 ### 从 GitHub 克隆（开发 / 改代码）
 
@@ -113,7 +115,7 @@ npm run build && npm start
 
 | 问题 | 处理 |
 |------|------|
-| 无法连接后端 | 确认已运行 `npx claudecode-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
+| 无法连接后端 | 确认已运行 `npx -y claudecode-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
 | 列表为空 | 确认对应目录存在且已有工具产生的历史 |
 | 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
 

@@ -1,6 +1,6 @@
 {
   "name": "claudecode-history-viewer",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Local web viewer for Claude Code and Cursor conversation history",
   "license": "MIT",
   "author": "wonderomg",
