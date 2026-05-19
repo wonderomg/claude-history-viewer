@@ -14,29 +14,50 @@ import { parseCursorTranscript, searchInCursorTranscript } from './parser-cursor
 import { messagesToMarkdown } from './export.js'
 import { openBrowser } from './open-browser.js'
 import {
-  resolveServerConfig,
+  resolveAppConfig,
   printConfigHelp,
-  resolveLanguageFromConfig,
-  resolveThemeFromConfig,
+  ensureUserConfig,
+  printResolvedConfig,
 } from './load-config.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-let serverConfig
+let appConfig
 try {
-  serverConfig = resolveServerConfig()
+  appConfig = resolveAppConfig()
 } catch (err) {
   console.error(`[error] ${err.message}`)
   process.exit(1)
 }
 
-if (serverConfig.help) {
+if (appConfig.help) {
   printConfigHelp()
   process.exit(0)
 }
 
-const PORT = serverConfig.port
-const HOST = serverConfig.host
+if (appConfig.initConfig) {
+  const { path: configPath, created } = ensureUserConfig({ force: appConfig.forceInit })
+  if (created || appConfig.forceInit) {
+    console.log(`[ok] Config: ${configPath}`)
+  } else {
+    console.log(`[ok] Config already exists: ${configPath}`)
+  }
+  process.exit(0)
+}
+
+if (appConfig.showConfig) {
+  ensureUserConfig()
+  printResolvedConfig(appConfig)
+  process.exit(0)
+}
+
+const { created, path: userConfigPath } = ensureUserConfig()
+if (created) {
+  console.log(`[info] Created default config: ${userConfigPath}`)
+}
+
+const PORT = appConfig.port
+const HOST = appConfig.host
 const isProd = process.env.NODE_ENV === 'production'
 
 const app = express()
@@ -61,12 +82,13 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.get('/api/config', (_req, res) => {
-  const configLocale = resolveLanguageFromConfig()
-  const configTheme = resolveThemeFromConfig()
   res.json({
-    locale: configLocale ?? 'en',
-    language: configLocale ?? 'en',
-    theme: configTheme ?? 'light',
+    locale: appConfig.language,
+    language: appConfig.language,
+    theme: appConfig.theme,
+    port: appConfig.port,
+    host: appConfig.host,
+    userConfigPath: appConfig.userConfigPath,
   })
 })
 

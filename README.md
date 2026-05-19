@@ -94,19 +94,36 @@ Project slugs like `-Users-you-code-project` are decoded to readable paths in th
 
 ## Configuration
 
-### Port (highest priority first)
-
-1. CLI `--port` / `-p`
-2. `PORT` environment variable
-3. `config.yaml` (project directory overrides user home)
-4. Default `3747`
+On **first start**, a user config file is created automatically at `~/.claudecode-history-viewer/config.yaml` (if it does not exist).
 
 ```bash
-claudecode-history-viewer --port 3800
+claudecode-history-viewer --init-config    # create manually
+claudecode-history-viewer --config       # show paths and effective values
+claudecode-history-viewer --help         # all CLI options
+```
+
+### CLI overrides (highest priority)
+
+```bash
+claudecode-history-viewer --port 3800 --language zh --theme eye
 npm start -- --port 3800
 ```
 
-Edit **`config.yaml`** in the project root (the npm package ships one too — works with `npx` from any directory). Optional user override: `~/.claudecode-history-viewer/config.yaml`.
+| Flag | Description |
+|------|-------------|
+| `--port`, `-p` | Listen port |
+| `--host` | Bind address |
+| `--language`, `--lang` | UI language: `zh` \| `en` |
+| `--theme` | UI theme: `light` \| `dark` \| `eye` |
+| `--init-config` | Write default `~/.claudecode-history-viewer/config.yaml` |
+| `--config` | Print resolved configuration |
+| `--force` | With `--init-config`, overwrite existing file |
+
+### Config file merge order (later overrides earlier)
+
+1. Package bundled `config.yaml`
+2. `~/.claudecode-history-viewer/config.yaml` (user; auto-created on first run)
+3. `./config.yaml` in the current working directory
 
 ```yaml
 port: 3747

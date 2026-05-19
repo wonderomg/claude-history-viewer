@@ -94,19 +94,36 @@ npm run build && npm start
 
 ## 配置
 
-### 端口（优先级从高到低）
-
-1. 命令行 `--port` / `-p`
-2. 环境变量 `PORT`
-3. `config.yaml`（当前目录覆盖用户目录）
-4. 默认 `3747`
+**首次启动**时会自动创建 `~/.claudecode-history-viewer/config.yaml`（若不存在）。
 
 ```bash
-claudecode-history-viewer --port 3800
+claudecode-history-viewer --init-config    # 手动创建配置文件
+claudecode-history-viewer --config       # 查看配置路径与生效值
+claudecode-history-viewer --help         # 全部 CLI 参数
+```
+
+### 命令行覆盖（优先级最高）
+
+```bash
+claudecode-history-viewer --port 3800 --language zh --theme eye
 npm start -- --port 3800
 ```
 
-直接编辑项目根目录 **`config.yaml`**（`npm` 安装包内也自带一份，可在任意目录用 `npx` 启动）。用户级覆盖：`~/.claudecode-history-viewer/config.yaml`。
+| 参数 | 说明 |
+|------|------|
+| `--port`, `-p` | 监听端口 |
+| `--host` | 绑定地址 |
+| `--language`, `--lang` | 界面语言：`zh` \| `en` |
+| `--theme` | 界面主题：`light` \| `dark` \| `eye` |
+| `--init-config` | 写入默认 `~/.claudecode-history-viewer/config.yaml` |
+| `--config` | 打印当前生效配置 |
+| `--force` | 配合 `--init-config`，覆盖已有文件 |
+
+### 配置文件合并顺序（后者覆盖前者）
+
+1. 安装包内 `config.yaml`
+2. `~/.claudecode-history-viewer/config.yaml`（用户配置，首次运行自动创建）
+3. 当前目录 `./config.yaml`
 
 ```yaml
 port: 3747

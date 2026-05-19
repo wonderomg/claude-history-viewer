@@ -4,7 +4,12 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { resolveServerConfig, printConfigHelp } from '../server/load-config.js'
+import {
+  resolveAppConfig,
+  ensureUserConfig,
+  printConfigHelp,
+  printResolvedConfig,
+} from '../server/load-config.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -20,7 +25,7 @@ if (!fs.existsSync(distIndex)) {
 
 let config
 try {
-  config = resolveServerConfig(process.argv)
+  config = resolveAppConfig(process.argv)
 } catch (err) {
   console.error(`[error] ${err.message}`)
   process.exit(1)
@@ -31,6 +36,29 @@ if (config.help) {
   process.exit(0)
 }
 
+if (config.initConfig) {
+  const { path: configPath, created } = ensureUserConfig({ force: config.forceInit })
+  if (created) {
+    console.log(`[ok] Created config: ${configPath}`)
+  } else if (config.forceInit) {
+    console.log(`[ok] Overwrote config: ${configPath}`)
+  } else {
+    console.log(`[ok] Config already exists: ${configPath}`)
+  }
+  process.exit(0)
+}
+
+if (config.showConfig) {
+  ensureUserConfig()
+  printResolvedConfig(config)
+  process.exit(0)
+}
+
+const { created, path: userConfigPath } = ensureUserConfig()
+if (created) {
+  console.log(`[info] Created default config: ${userConfigPath}`)
+}
+
 const child = spawn(process.execPath, [server], {
   cwd: root,
   env: {
@@ -38,6 +66,8 @@ const child = spawn(process.execPath, [server], {
     NODE_ENV: 'production',
     PORT: String(config.port),
     HOST: config.host,
+    CHV_LANGUAGE: config.language,
+    CHV_THEME: config.theme,
   },
   stdio: 'inherit',
 })
