@@ -35,7 +35,9 @@ npm install -g claudecode-history-viewer
 claudecode-history-viewer
 ```
 
-Open **http://localhost:3747**. Disable auto-open: `NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
+Open **http://localhost:3747**
+
+Disable auto-open: `NO_OPEN_BROWSER=1 npx claudecode-history-viewer`
 
 ### Clone from GitHub (development)
 
