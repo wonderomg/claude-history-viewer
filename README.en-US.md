@@ -22,6 +22,17 @@ Browse, search, and export sessions from `~/.claude` and `~/.cursor` — **100% 
 
 Requires **Node.js 18+**. Optional: existing `~/.claude` / `~/.cursor` history on your machine.
 
+### Install from GitHub (recommended)
+
+```bash
+npm install -g git+https://github.com/wonderomg/claude-history-viewer.git
+claude-history-viewer
+```
+
+The first install clones the repo, installs dependencies, and builds — may take a minute or two.
+
+### Run from source
+
 ```bash
 git clone https://github.com/wonderomg/claude-history-viewer.git
 cd claude-history-viewer
@@ -29,9 +40,9 @@ npm install
 npm run build && npm start
 ```
 
-Open **http://localhost:3747** in your browser. Auto-open on start; disable: `NO_OPEN_BROWSER=1 npm start`.
+Open **http://localhost:3747**. Auto-open on start; disable: `NO_OPEN_BROWSER=1 claude-history-viewer` (global) or `NO_OPEN_BROWSER=1 npm start` (source).
 
-For development (hot reload): `npm run dev` → http://localhost:5173
+For development (hot reload): `npm run dev` in the repo → http://localhost:5173
 
 ---
 
@@ -96,7 +107,7 @@ Project slugs like `-Users-you-code-project` are decoded to readable paths in th
 
 | Issue | Fix |
 |-------|-----|
-| Cannot connect to backend | Run `npm run build && npm start`; ensure port `3747` is free |
+| Cannot connect to backend | Run `claude-history-viewer` or `npm start`; ensure port `3747` is free |
 | Empty session list | Ensure history dirs exist and tools have written data |
 | Search/highlight off | Press **Enter** in in-session search, or use ◀ ▶ after render |
 
