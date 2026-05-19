@@ -29,7 +29,9 @@ npm install
 npm run build && npm start
 ```
 
-浏览器访问 **http://localhost:3747**。启动后会尝试自动打开；禁用：`NO_OPEN_BROWSER=1 npm start`。
+浏览器访问 **http://localhost:3747**
+
+启动后会尝试自动打开；禁用：`NO_OPEN_BROWSER=1 npm start`。
 
 开发调试（热更新）：`npm run dev` → http://localhost:5173
 

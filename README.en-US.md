@@ -29,7 +29,9 @@ npm install
 npm run build && npm start
 ```
 
-Open **http://localhost:3747**. Auto-open on start; disable: `NO_OPEN_BROWSER=1 npm start`.
+Open **http://localhost:3747**
+
+Auto-open on start; disable: `NO_OPEN_BROWSER=1 npm start`.
 
 For development (hot reload): `npm run dev` → http://localhost:5173
 
