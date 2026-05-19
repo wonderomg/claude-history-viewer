@@ -151,19 +151,60 @@ watch(
   }
 )
 
-function onSearchInput(e) {
-  emit('update:searchQuery', e.target.value)
-}
+const localSearchQuery = ref('')
+const isSearchComposing = ref(false)
+
+watch(
+  () => props.searchQuery,
+  (q) => {
+    if (!isSearchComposing.value) localSearchQuery.value = q
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.session?.id,
+  () => {
+    isSearchComposing.value = false
+    localSearchQuery.value = props.searchQuery
+  }
+)
 
 let searchTimer
-function onSearchKeyup(e) {
-  if (e.key === 'Enter') return
+function scheduleSessionSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => emit('search'), 300)
 }
 
+function onSearchInput(e) {
+  const v = e.target.value
+  localSearchQuery.value = v
+  if (isSearchComposing.value) return
+  emit('update:searchQuery', v)
+  scheduleSessionSearch()
+}
+
+function onSearchCompositionStart() {
+  isSearchComposing.value = true
+  clearTimeout(searchTimer)
+}
+
+function onSearchCompositionEnd(e) {
+  isSearchComposing.value = false
+  const v = e.target.value
+  localSearchQuery.value = v
+  emit('update:searchQuery', v)
+  scheduleSessionSearch()
+}
+
+function onSearchKeyup(e) {
+  if (e.key === 'Enter' || isSearchComposing.value) return
+  scheduleSessionSearch()
+}
+
 function onSearchKeydown(e) {
   if (e.key === 'Enter') {
+    if (isSearchComposing.value) return
     e.preventDefault()
     clearTimeout(searchTimer)
     lastSearchNavKey = ''
@@ -259,11 +300,13 @@ const sessionLabel = computed(() => {
 
       <div v-if="viewMode === 'chat'" class="flex flex-wrap items-center gap-2 mt-3">
         <input
-          :value="searchQuery"
+          :value="localSearchQuery"
           type="search"
           :placeholder="t('chat.inSessionSearch')"
           class="flex-1 min-w-[160px] max-w-md px-3 py-1.5 text-sm rounded-lg bg-t-bg border border-t-border text-t-text placeholder:text-t-muted focus:outline-none focus:ring-1 focus:ring-accent/50"
           @input="onSearchInput"
+          @compositionstart="onSearchCompositionStart"
+          @compositionend="onSearchCompositionEnd"
           @keyup="onSearchKeyup"
           @keydown="onSearchKeydown"
         />

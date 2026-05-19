@@ -175,7 +175,7 @@ if (isProd) {
 
 const DEV_WEB_PORT = process.env.VITE_PORT || 5173
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   const apiUrl = `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`
   const browseUrl = isProd ? apiUrl : `http://localhost:${DEV_WEB_PORT}`
 
@@ -187,4 +187,13 @@ app.listen(PORT, HOST, () => {
 
   const delay = isProd ? 300 : 800
   setTimeout(() => openBrowser(browseUrl), delay)
+})
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[error] Port ${PORT} is already in use (${HOST}:${PORT}).`)
+    console.error('  Stop the other process, or run: PORT=3748 npm start')
+    process.exit(1)
+  }
+  throw err
 })

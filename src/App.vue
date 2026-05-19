@@ -170,9 +170,28 @@ async function runGlobalSearch() {
   }
 }
 
-function onGlobalInput() {
+const globalComposing = ref(false)
+
+function scheduleGlobalSearch() {
   clearTimeout(globalTimer)
   globalTimer = setTimeout(runGlobalSearch, 400)
+}
+
+function onGlobalInput(e) {
+  globalQuery.value = e.target.value
+  if (globalComposing.value) return
+  scheduleGlobalSearch()
+}
+
+function onGlobalCompositionStart() {
+  globalComposing.value = true
+  clearTimeout(globalTimer)
+}
+
+function onGlobalCompositionEnd(e) {
+  globalComposing.value = false
+  globalQuery.value = e.target.value
+  scheduleGlobalSearch()
 }
 
 function onGlobalSearchFocus() {
@@ -244,11 +263,13 @@ onUnmounted(() => {
       </div>
       <div ref="globalSearchInput" class="flex-1 max-w-2xl min-w-0">
         <input
-          v-model="globalQuery"
+          :value="globalQuery"
           type="search"
           :placeholder="t('app.globalSearchPlaceholder')"
           class="w-full px-3 py-1.5 text-sm rounded-lg bg-t-bg border border-t-border text-t-text placeholder:text-t-muted focus:outline-none focus:ring-1 focus:ring-accent/50 theme-transition"
           @input="onGlobalInput"
+          @compositionstart="onGlobalCompositionStart"
+          @compositionend="onGlobalCompositionEnd"
           @focus="onGlobalSearchFocus"
           @mousedown="onGlobalSearchPointerDown"
         />
