@@ -108,6 +108,7 @@ npm run build && npm start
 | 问题 | 处理 |
 |------|------|
 | 无法连接后端 | 确认已运行 `claude-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
+| `git dep preparation failed` / code 236 | 先执行 `unset NODE_ENV` 再安装；需 Node 18+；拉取含最新 `package.json` 的代码 |
 | 列表为空 | 确认对应目录存在且已有工具产生的历史 |
 | 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
 

@@ -108,6 +108,7 @@ Project slugs like `-Users-you-code-project` are decoded to readable paths in th
 | Issue | Fix |
 |-------|-----|
 | Cannot connect to backend | Run `claude-history-viewer` or `npm start`; ensure port `3747` is free |
+| `git dep preparation failed` / code 236 | Run `unset NODE_ENV` before install; need Node 18+; use latest repo commit |
 | Empty session list | Ensure history dirs exist and tools have written data |
 | Search/highlight off | Press **Enter** in in-session search, or use ◀ ▶ after render |
 
