@@ -22,17 +22,6 @@
 
 需要 **Node.js 18+**。本机可选已有 `~/.claude` / `~/.cursor` 历史数据。
 
-### 从 GitHub 安装（推荐）
-
-```bash
-npm install -g git+https://github.com/wonderomg/claude-history-viewer.git
-claude-history-viewer
-```
-
-首次安装会拉取代码、安装依赖并构建，可能需要一两分钟。
-
-### 克隆源码运行
-
 ```bash
 git clone https://github.com/wonderomg/claude-history-viewer.git
 cd claude-history-viewer
@@ -40,9 +29,9 @@ npm install
 npm run build && npm start
 ```
 
-浏览器访问 **http://localhost:3747**。启动后会尝试自动打开；禁用：`NO_OPEN_BROWSER=1 claude-history-viewer`（全局安装）或 `NO_OPEN_BROWSER=1 npm start`（源码）。
+浏览器访问 **http://localhost:3747**。启动后会尝试自动打开；禁用：`NO_OPEN_BROWSER=1 npm start`。
 
-开发调试（热更新）：在源码目录执行 `npm run dev` → http://localhost:5173
+开发调试（热更新）：`npm run dev` → http://localhost:5173
 
 ---
 
@@ -107,8 +96,7 @@ npm run build && npm start
 
 | 问题 | 处理 |
 |------|------|
-| 无法连接后端 | 确认已运行 `claude-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
-| `git dep preparation failed` / code 236 | 先执行 `unset NODE_ENV` 再安装；需 Node 18+；拉取含最新 `package.json` 的代码 |
+| 无法连接后端 | 确认已执行 `npm run build && npm start`，端口 `3747` 未被占用 |
 | 列表为空 | 确认对应目录存在且已有工具产生的历史 |
 | 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
 

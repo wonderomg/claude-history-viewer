@@ -21,38 +21,24 @@
     "viewer"
   ],
   "type": "module",
-  "bin": {
-    "claude-history-viewer": "bin/cli.js"
-  },
-  "files": [
-    "bin",
-    "dist",
-    "server",
-    "scripts",
-    "index.html"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"node server/index.js\" \"vite\"",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node server/index.js",
-    "prepare": "node scripts/prepare.mjs"
+    "start": "NODE_ENV=production node server/index.js"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
-    "autoprefixer": "^10.4.20",
     "express": "^4.21.2",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "vite": "^6.0.7",
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.7"
   }
 }
