@@ -13,6 +13,7 @@ import { parseTranscript, searchInTranscript } from './parser.js'
 import { parseCursorTranscript, searchInCursorTranscript } from './parser-cursor.js'
 import { messagesToMarkdown } from './export.js'
 import { openBrowser } from './open-browser.js'
+import { buildUsageReport } from './usage.js'
 import {
   resolveAppConfig,
   printConfigHelp,
@@ -90,6 +91,16 @@ app.get('/api/config', (_req, res) => {
     host: appConfig.host,
     userConfigPath: appConfig.userConfigPath,
   })
+})
+
+app.get('/api/usage', (_req, res) => {
+  try {
+    const sessions = scanAllSessions({ source: 'all' })
+    res.json(buildUsageReport(sessions))
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.get('/api/sessions', (req, res) => {

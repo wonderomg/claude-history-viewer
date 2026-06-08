@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import SessionItem from './SessionItem.vue'
 import { useLocale } from '../composables/useLocale.js'
+import { scrollElementInContainer } from '../utils/highlight.js'
 
 const { t } = useLocale()
 
@@ -82,6 +83,27 @@ const grouped = computed(() => {
     subagents: subsByParent.get(main.id) || [],
   }))
 })
+
+const listRef = ref(null)
+
+/** @param {string} sessionId */
+function focusSession(sessionId) {
+  const session = props.sessions.find((s) => s.id === sessionId)
+  if (session?.kind === 'subagent' && session.parentSessionId) {
+    collapsedParents.value = {
+      ...collapsedParents.value,
+      [session.parentSessionId]: false,
+    }
+  }
+  nextTick(() => {
+    const root = listRef.value
+    if (!root) return
+    const el = root.querySelector(`[data-session-id="${CSS.escape(sessionId)}"]`)
+    if (el) scrollElementInContainer(el, root, { block: 'center' })
+  })
+}
+
+defineExpose({ focusSession })
 </script>
 
 <template>
@@ -143,7 +165,7 @@ const grouped = computed(() => {
       {{ t('sidebar.loading') }}
     </div>
 
-    <ul v-else class="flex-1 overflow-y-auto p-2 space-y-1">
+    <ul v-else ref="listRef" class="flex-1 overflow-y-auto p-2 space-y-1">
       <li v-if="filtered.length === 0" class="px-3 py-8 text-center text-t-muted text-sm">
         {{ t('sidebar.noSessions') }}
       </li>

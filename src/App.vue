@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import SessionSidebar from './components/SessionSidebar.vue'
 import ChatView from './components/ChatView.vue'
+import UsageDashboard from './components/UsageDashboard.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import SettingsMenu from './components/SettingsMenu.vue'
 import { useLocale } from './composables/useLocale.js'
@@ -38,6 +39,13 @@ const focusMessageId = ref('')
 const globalSearchInput = ref(null)
 const globalResultsPanel = ref(null)
 const error = ref('')
+/** 'sessions' | 'dashboard' */
+const appView = ref('sessions')
+const refreshing = ref(false)
+const dashboardRef = ref(null)
+const sidebarRef = ref(null)
+/** 进入会话详情前所在的视图，用于返回上一页 */
+const previousAppView = ref(null)
 
 /** 顶栏展示的数据目录（随来源切换） */
 const activeDataDir = computed(() => {
@@ -245,6 +253,74 @@ function onSourceFilterChange(v) {
   }
 }
 
+function toggleAppView() {
+  if (appView.value === 'dashboard') {
+    previousAppView.value = null
+    appView.value = 'sessions'
+  } else {
+    previousAppView.value = null
+    appView.value = 'dashboard'
+  }
+}
+
+function goBack() {
+  const prev = previousAppView.value
+  if (!prev) return
+  previousAppView.value = null
+  appView.value = prev
+}
+
+async function openSessionFromDashboard(payload) {
+  const sessionId = typeof payload === 'string' ? payload : payload?.sessionId
+  const source = typeof payload === 'object' ? payload?.source : null
+  if (!sessionId) return
+
+  previousAppView.value = appView.value
+  appView.value = 'sessions'
+  listQuery.value = ''
+  projectFilter.value = ''
+
+  if (source === 'cursor' || source === 'claude') {
+    sourceFilter.value = source
+  }
+
+  await loadSessions()
+
+  if (!sessions.value.some((s) => s.id === sessionId) && sourceFilter.value !== 'all') {
+    sourceFilter.value = 'all'
+    await loadSessions()
+  }
+
+  const target = sessions.value.find((s) => s.id === sessionId)
+  if (target?.kind === 'subagent') {
+    hideSubagents.value = false
+  }
+
+  await selectSession(sessionId, true)
+  await nextTick()
+  sidebarRef.value?.focusSession?.(sessionId)
+}
+
+async function refreshData() {
+  if (refreshing.value) return
+  refreshing.value = true
+  try {
+    if (appView.value === 'dashboard') {
+      await dashboardRef.value?.refresh?.()
+    } else {
+      await loadSessions()
+      if (selectedId.value) {
+        await selectSession(selectedId.value, true)
+      }
+      if (globalQuery.value.trim()) {
+        await runGlobalSearch()
+      }
+    }
+  } finally {
+    refreshing.value = false
+  }
+}
+
 onMounted(() => {
   loadSessions()
   document.addEventListener('mousedown', onDocumentPointerDown)
@@ -261,7 +337,7 @@ onUnmounted(() => {
         <h1 class="text-sm font-semibold text-t-text tracking-tight font-mono">claude-history-viewer</h1>
         <p class="text-[10px] text-t-muted mt-0.5 hidden sm:block">{{ t('app.subtitle') }}</p>
       </div>
-      <div ref="globalSearchInput" class="flex-1 max-w-2xl min-w-0">
+      <div v-if="appView === 'sessions'" ref="globalSearchInput" class="flex-1 max-w-2xl min-w-0">
         <input
           :value="globalQuery"
           type="search"
@@ -274,13 +350,94 @@ onUnmounted(() => {
           @mousedown="onGlobalSearchPointerDown"
         />
       </div>
-      <span v-if="globalSearching" class="text-xs text-t-muted shrink-0 hidden sm:inline">{{ t('app.searching') }}</span>
+      <div v-else class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-t-text">{{ t('dashboard.title') }}</p>
+      </div>
+      <span v-if="appView === 'sessions' && globalSearching" class="text-xs text-t-muted shrink-0 hidden sm:inline">{{ t('app.searching') }}</span>
       <span
-        v-else-if="activeDataDir"
+        v-else-if="appView === 'sessions' && activeDataDir"
         class="text-[10px] text-t-muted font-mono hidden lg:block truncate max-w-xs shrink-0"
         :title="activeDataDirTitle"
       >{{ activeDataDir }}</span>
       <div class="shrink-0 ml-auto flex items-center gap-1.5 pl-2 pr-0.5">
+        <button
+          v-if="appView === 'sessions' && previousAppView"
+          type="button"
+          class="p-2 rounded-lg border border-accent/50 bg-accent/10 text-accent hover:bg-accent/15 transition-all duration-300"
+          :title="t('app.goBack')"
+          :aria-label="t('app.goBack')"
+          @click="goBack"
+        >
+          <svg
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="p-2 rounded-lg border transition-all duration-300"
+          :class="appView === 'dashboard'
+            ? 'border-accent/50 bg-accent/10 text-accent'
+            : 'border-t-border bg-t-raised text-t-muted hover:text-t-text hover:border-accent/40'"
+          :title="appView === 'dashboard' ? t('app.backToSessions') : t('app.openDashboard')"
+          :aria-label="appView === 'dashboard' ? t('app.backToSessions') : t('app.openDashboard')"
+          @click="toggleAppView"
+        >
+          <svg
+            v-if="appView === 'dashboard'"
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          <svg
+            v-else
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 3v18h18" />
+            <path d="M7 16l4-6 4 3 5-8" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="p-2 rounded-lg border border-t-border bg-t-raised text-t-muted hover:text-t-text hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none"
+          :title="refreshing ? t('app.refreshing') : t('app.refresh')"
+          :aria-label="refreshing ? t('app.refreshing') : t('app.refresh')"
+          :disabled="refreshing"
+          @click="refreshData"
+        >
+          <svg
+            class="w-5 h-5"
+            :class="refreshing ? 'animate-spin' : ''"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <path d="M21 3v6h-6" />
+          </svg>
+        </button>
         <ThemeToggle />
         <SettingsMenu />
       </div>
@@ -291,7 +448,7 @@ onUnmounted(() => {
     </p>
 
     <div
-      v-if="showGlobalResultsPanel && (globalResults.length || globalSearching)"
+      v-if="appView === 'sessions' && showGlobalResultsPanel && (globalResults.length || globalSearching)"
       ref="globalResultsPanel"
       class="shrink-0 max-h-40 overflow-y-auto border-b border-t-border bg-t-overlay px-4 py-2 theme-transition"
     >
@@ -318,42 +475,51 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <div class="flex-1 flex min-h-0">
-      <SessionSidebar
-        class="w-72 lg:w-80 shrink-0"
-        :sessions="sessions"
-        :projects="projects"
-        :selected-id="selectedId"
-        :project-filter="projectFilter"
-        :list-query="listQuery"
-        :hide-subagents="hideSubagents"
-        :source-filter="sourceFilter"
-        :loading="listLoading"
-        @select="selectSession($event, true)"
-        @update:project-filter="projectFilter = $event"
-        @update:list-query="listQuery = $event"
-        @update:hide-subagents="hideSubagents = $event"
-        @update:source-filter="onSourceFilterChange"
+    <div class="flex-1 flex min-h-0 overflow-hidden">
+      <UsageDashboard
+        v-show="appView === 'dashboard'"
+        ref="dashboardRef"
+        class="flex-1 min-w-0 flex flex-col min-h-0"
+        @select-session="openSessionFromDashboard"
       />
-      <ChatView
-        class="flex-1 min-w-0"
-        :session="currentSession"
-        :meta="meta"
-        :messages="messages"
-        :subagents="subagents"
-        :loading="detailLoading"
-        v-model:search-query="searchQuery"
-        v-model:tools-only="toolsOnly"
-        v-model:view-mode="viewMode"
-        :search-hits="searchHits"
-        :search-matches="searchMatches"
-        :focus-message-id="focusMessageId"
-        @search="searchInSession"
-        @search-enter="onSessionSearchEnter"
-        @focus-handled="focusMessageId = ''"
-        @select-subagent="selectSession($event, true)"
-        @export="exportMarkdown"
-      />
+      <div v-show="appView === 'sessions'" class="flex-1 flex min-h-0 min-w-0">
+        <SessionSidebar
+          ref="sidebarRef"
+          class="w-72 lg:w-80 shrink-0"
+          :sessions="sessions"
+          :projects="projects"
+          :selected-id="selectedId"
+          :project-filter="projectFilter"
+          :list-query="listQuery"
+          :hide-subagents="hideSubagents"
+          :source-filter="sourceFilter"
+          :loading="listLoading"
+          @select="selectSession($event, true)"
+          @update:project-filter="projectFilter = $event"
+          @update:list-query="listQuery = $event"
+          @update:hide-subagents="hideSubagents = $event"
+          @update:source-filter="onSourceFilterChange"
+        />
+        <ChatView
+          class="flex-1 min-w-0"
+          :session="currentSession"
+          :meta="meta"
+          :messages="messages"
+          :subagents="subagents"
+          :loading="detailLoading"
+          v-model:search-query="searchQuery"
+          v-model:tools-only="toolsOnly"
+          v-model:view-mode="viewMode"
+          :search-hits="searchHits"
+          :search-matches="searchMatches"
+          :focus-message-id="focusMessageId"
+          @search="searchInSession"
+          @search-enter="onSessionSearchEnter"
+          @focus-handled="focusMessageId = ''"
+          @select-subagent="selectSession($event, true)"
+          @export="exportMarkdown"
+        />
+      </div>
     </div>
   </div>
 </template>

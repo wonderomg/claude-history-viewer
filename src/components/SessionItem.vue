@@ -17,6 +17,7 @@ defineEmits(['select'])
   <button
     type="button"
     class="w-full text-left rounded-lg transition-colors border"
+    :data-session-id="session.id"
     :class="[
       selectedId === session.id
         ? 'bg-accent/15 border-accent/30 text-t-text'

@@ -35,3 +35,17 @@ export function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
+
+/** @param {number} n */
+export function formatTokenCount(n) {
+  const v = Number(n) || 0
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
+  if (v >= 10_000) return `${(v / 1_000).toFixed(1)}K`
+  if (v >= 1_000) return `${(v / 1_000).toFixed(2)}K`
+  return String(v)
+}
+
+/** @param {number} n */
+export function formatTokenCountFull(n) {
+  return (Number(n) || 0).toLocaleString(resolveLocaleTag())
+}
