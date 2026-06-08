@@ -146,7 +146,7 @@ const selectedDaySessions = computed(() => {
 })
 
 function selectChartDay(date) {
-  selectedDay.value = date
+  selectedDay.value = selectedDay.value === date ? '' : date
 }
 
 function clearSelectedDay() {
