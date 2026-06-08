@@ -16,7 +16,7 @@ Browse, search, and export sessions from `~/.claude` and `~/.cursor` — **100% 
 
 <p align="center">
   <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-en.jpg" />
-  <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-usage.jpg" />
+  <img width="80%" alt="Usage" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-usage.jpg" />
 </p>
 
 ## Quick Start

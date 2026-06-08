@@ -16,8 +16,9 @@
 
 <p align="center">
   <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer.jpg" />
-  <img width="80%" alt="History" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-usage.jpg" />
+  <img width="80%" alt="Usage" src="https://raw.githubusercontent.com/wonderomg/claude-history-viewer/master/claude-history-viewer-usage.jpg" />
 </p>
+
 
 ## 快速开始
 
