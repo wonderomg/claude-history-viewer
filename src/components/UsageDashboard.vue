@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useLocale } from '../composables/useLocale.js'
 import { formatTokenCount, formatTokenCountFull, formatTime } from '../utils/format.js'
+import { buildDayCompare } from '../utils/usage-day-compare.js'
+import UsageActivityPanel from './UsageActivityPanel.vue'
 
 const emit = defineEmits(['select-session', 'back'])
 
@@ -9,8 +11,48 @@ const { t, locale } = useLocale()
 
 const loading = ref(true)
 const error = ref('')
-const sourceTab = ref('claude')
 const report = ref(null)
+const sourceTab = ref('claude')
+
+const sourceTabs = [
+  {
+    id: 'claude',
+    label: 'Claude Code',
+    activeClass: 'bg-accent/15 text-accent ring-1 ring-accent/25',
+    barClass: 'bg-accent/45 group-hover:bg-accent/70',
+    barSelectedClass: 'bg-accent shadow-[0_0_0_2px_rgb(var(--t-bg)),0_0_0_3px] shadow-accent/60',
+    totalAccent: 'text-accent',
+    heroGradient: 'from-accent/80 via-accent/40 to-transparent',
+    selectedRing: 'border-accent/50 ring-1 ring-accent/20',
+  },
+  {
+    id: 'cursor',
+    label: 'Cursor',
+    activeClass: 'bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/25',
+    barClass: 'bg-sky-400/45 group-hover:bg-sky-400/70',
+    barSelectedClass: 'bg-sky-400 shadow-[0_0_0_2px_rgb(var(--t-bg)),0_0_0_3px] shadow-sky-400/60',
+    totalAccent: 'text-sky-400',
+    heroGradient: 'from-sky-500/80 via-sky-500/40 to-transparent',
+    selectedRing: 'border-sky-500/50 ring-1 ring-sky-500/20',
+  },
+  {
+    id: 'codex',
+    label: 'Codex',
+    activeClass: 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25',
+    barClass: 'bg-emerald-400/45 group-hover:bg-emerald-400/70',
+    barSelectedClass: 'bg-emerald-400 shadow-[0_0_0_2px_rgb(var(--t-bg)),0_0_0_3px] shadow-emerald-400/60',
+    totalAccent: 'text-emerald-400',
+    heroGradient: 'from-emerald-500/80 via-emerald-500/40 to-transparent',
+    selectedRing: 'border-emerald-500/50 ring-1 ring-emerald-500/20',
+  },
+]
+
+const currentSourceTab = computed(() => sourceTabs.find((tab) => tab.id === sourceTab.value) ?? sourceTabs[0])
+
+const active = computed(() => {
+  if (!report.value) return null
+  return report.value[sourceTab.value] ?? null
+})
 
 /** @type {import('vue').Ref<'7'|'14'|'30'|'90'|'all'|'custom'>} */
 const rangePreset = ref('14')
@@ -23,11 +65,6 @@ function formatYmd(d) {
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
-
-const active = computed(() => {
-  if (!report.value) return null
-  return sourceTab.value === 'claude' ? report.value.claude : report.value.cursor
-})
 
 const allChartDays = computed(() => {
   const days = active.value?.byDay
@@ -130,9 +167,11 @@ const chartScrollable = computed(() => chartDays.value.length > 31)
 
 const selectedDay = ref('')
 const chartInteractionRef = ref(null)
+const activityPanelRef = ref(null)
 const todayCompareRef = ref(null)
 
-const dayCompare = computed(() => active.value?.dayCompare ?? null)
+const dayCompare = computed(() => buildDayCompare(allChartDays.value))
+const activity = computed(() => active.value?.activity ?? null)
 
 const selectedDayMeta = computed(() =>
   chartDays.value.find((d) => d.date === selectedDay.value) ?? null
@@ -157,6 +196,7 @@ function onDocumentPointerDown(e) {
   if (!selectedDay.value) return
   const target = e.target
   if (chartInteractionRef.value?.contains(target)) return
+  if (activityPanelRef.value?.panelRef?.contains(target)) return
   if (todayCompareRef.value?.contains(target)) return
   clearSelectedDay()
 }
@@ -172,6 +212,10 @@ function formatCompareDelta(delta, pct) {
   if (delta > 0) return t('dashboard.compareUp', { n: formatTokenCount(delta), pct: Math.abs(pct) })
   if (delta < 0) return t('dashboard.compareDown', { n: formatTokenCount(Math.abs(delta)), pct: Math.abs(pct) })
   return t('dashboard.compareFlat')
+}
+
+function onActivitySelectDay(date) {
+  selectChartDay(date)
 }
 
 const modelRows = computed(() => {
@@ -215,24 +259,35 @@ const todaySharePct = computed(() => {
   return Math.round((today / total) * 1000) / 10
 })
 
-const secondaryStatCards = computed(() => statCards.value.filter((c) => c.key !== 'total'))
-
 const statCards = computed(() => {
   const totals = active.value?.totals
   if (!totals) return []
   const cards = [
-    { key: 'total', label: t('dashboard.totalTokens'), value: totals.totalTokens, accent: 'text-accent' },
+    { key: 'total', label: t('dashboard.totalTokens'), value: totals.totalTokens, accent: currentSourceTab.value.totalAccent },
     { key: 'input', label: t('dashboard.inputTokens'), value: totals.inputTokens, accent: 'text-sky-400' },
     { key: 'output', label: t('dashboard.outputTokens'), value: totals.outputTokens, accent: 'text-emerald-400' },
     { key: 'turns', label: t('dashboard.turnCount'), value: totals.turnCount, accent: 'text-t-text', raw: true },
   ]
-  if (!active.value?.estimated) {
-    cards.splice(3, 0,
-      { key: 'cacheRead', label: t('dashboard.cacheRead'), value: totals.cacheReadTokens, accent: 'text-violet-400' },
-      { key: 'cacheCreate', label: t('dashboard.cacheCreate'), value: totals.cacheCreationTokens, accent: 'text-amber-400' },
-    )
+  const extras = []
+  if (!active.value?.estimated && (totals.cacheReadTokens > 0 || sourceTab.value === 'claude')) {
+    extras.push({ key: 'cacheRead', label: t('dashboard.cacheRead'), value: totals.cacheReadTokens, accent: 'text-violet-400' })
   }
+  if (!active.value?.estimated && sourceTab.value === 'claude') {
+    extras.push({ key: 'cacheCreate', label: t('dashboard.cacheCreate'), value: totals.cacheCreationTokens, accent: 'text-amber-400' })
+  }
+  if ((totals.reasoningOutputTokens ?? 0) > 0) {
+    extras.push({ key: 'reasoning', label: t('dashboard.reasoningTokens'), value: totals.reasoningOutputTokens, accent: 'text-orange-400' })
+  }
+  cards.splice(3, 0, ...extras)
   return cards
+})
+
+const secondaryStatCards = computed(() => statCards.value.filter((c) => c.key !== 'total'))
+
+const modelBarClass = computed(() => {
+  if (sourceTab.value === 'cursor') return 'from-sky-400/70 to-sky-400'
+  if (sourceTab.value === 'codex') return 'from-emerald-400/70 to-emerald-400'
+  return 'from-accent/70 to-accent'
 })
 
 const hasData = computed(() => (active.value?.sessionsWithUsage ?? 0) > 0)
@@ -267,23 +322,17 @@ watch(
           <h2 class="text-lg font-semibold text-t-text tracking-tight">{{ t('dashboard.title') }}</h2>
           <p class="text-xs text-t-muted mt-0.5">{{ t('dashboard.subtitle') }}</p>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="inline-flex rounded-lg border border-t-border bg-t-bg p-0.5">
+        <div class="flex items-center gap-2 max-w-full overflow-x-auto pb-0.5">
+          <div class="inline-flex rounded-lg border border-t-border bg-t-bg p-0.5 shrink-0">
             <button
+              v-for="tab in sourceTabs"
+              :key="tab.id"
               type="button"
-              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-              :class="sourceTab === 'claude' ? 'bg-accent/15 text-accent' : 'text-t-muted hover:text-t-text'"
-              @click="sourceTab = 'claude'"
+              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap"
+              :class="sourceTab === tab.id ? tab.activeClass : 'text-t-muted hover:text-t-text'"
+              @click="sourceTab = tab.id"
             >
-              Claude Code
-            </button>
-            <button
-              type="button"
-              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-              :class="sourceTab === 'cursor' ? 'bg-sky-500/15 text-sky-400' : 'text-t-muted hover:text-t-text'"
-              @click="sourceTab = 'cursor'"
-            >
-              Cursor
+              {{ tab.label }}
             </button>
           </div>
         </div>
@@ -327,7 +376,7 @@ watch(
               ref="todayCompareRef"
               class="relative overflow-hidden rounded-2xl border bg-t-raised p-5 md:p-6 theme-transition"
               :class="[
-                selectedDay === dayCompare.today ? 'border-accent/50 ring-1 ring-accent/20' : 'border-t-border',
+                selectedDay === dayCompare.today ? currentSourceTab.selectedRing : 'border-t-border',
                 dayCompare.todayTokens > 0 ? 'cursor-pointer hover:border-accent/40' : '',
               ]"
               :role="dayCompare.todayTokens > 0 ? 'button' : undefined"
@@ -335,7 +384,7 @@ watch(
               @click="selectTodayFromCompare"
               @keydown.enter="selectTodayFromCompare"
             >
-              <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent/80 via-accent/40 to-transparent" />
+              <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r" :class="currentSourceTab.heroGradient" />
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-2">
@@ -357,7 +406,7 @@ watch(
                   class="shrink-0 rounded-xl border border-t-border bg-t-bg/80 px-3 py-2 text-right"
                 >
                   <p class="text-[10px] uppercase tracking-wider text-t-muted">{{ t('dashboard.todayShare') }}</p>
-                  <p class="text-lg font-semibold tabular-nums text-accent mt-0.5">{{ todaySharePct }}%</p>
+                  <p class="text-lg font-semibold tabular-nums mt-0.5" :class="currentSourceTab.totalAccent">{{ todaySharePct }}%</p>
                 </div>
               </div>
               <div class="mt-4 pt-4 border-t border-t-border/70 flex flex-wrap items-center justify-between gap-2">
@@ -390,7 +439,8 @@ watch(
                 </span>
               </div>
               <p
-                class="text-4xl md:text-[2.75rem] font-bold tabular-nums tracking-tight text-accent mt-2 leading-none"
+                class="text-4xl md:text-[2.75rem] font-bold tabular-nums tracking-tight mt-2 leading-none"
+                :class="currentSourceTab.totalAccent"
                 :title="formatTokenCountFull(totalsHero.totalTokens)"
               >
                 {{ formatTokenCount(totalsHero.totalTokens) }}
@@ -398,14 +448,8 @@ watch(
               <p class="text-sm text-t-muted mt-2">{{ t('dashboard.totalTokensHint') }}</p>
               <div class="mt-4">
                 <div class="h-2 rounded-full bg-t-bg overflow-hidden flex">
-                  <div
-                    class="h-full bg-sky-400/80 transition-all duration-500"
-                    :style="{ width: `${tokenBreakdown.inputPct}%` }"
-                  />
-                  <div
-                    class="h-full bg-emerald-400/80 transition-all duration-500"
-                    :style="{ width: `${tokenBreakdown.outputPct}%` }"
-                  />
+                  <div class="h-full bg-sky-400/80 transition-all duration-500" :style="{ width: `${tokenBreakdown.inputPct}%` }" />
+                  <div class="h-full bg-emerald-400/80 transition-all duration-500" :style="{ width: `${tokenBreakdown.outputPct}%` }" />
                 </div>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-t-muted">
                   <span class="inline-flex items-center gap-1.5">
@@ -475,7 +519,7 @@ watch(
                     type="button"
                     class="px-2 py-1 text-[10px] rounded-md border transition-colors"
                     :class="rangePreset === p.id
-                      ? 'border-accent/50 bg-accent/10 text-accent'
+                      ? `${currentSourceTab.activeClass} border-transparent`
                       : 'border-t-border text-t-muted hover:text-t-text'"
                     @click="p.id === 'custom' ? enableCustomRange() : applyRangePreset(p.id)"
                   >
@@ -536,22 +580,20 @@ watch(
                   >
                     <span
                       class="text-[9px] tabular-nums whitespace-nowrap transition-opacity"
-                      :class="selectedDay === day.date ? 'text-accent opacity-100' : 'text-t-muted opacity-0 group-hover:opacity-100'"
+                      :class="selectedDay === day.date ? `${currentSourceTab.totalAccent} opacity-100` : 'text-t-muted opacity-0 group-hover:opacity-100'"
                     >
                       {{ formatTokenCount(day.totalTokens) }}
                     </span>
                     <div class="flex-1 w-full flex items-end min-h-[8px]">
                       <div
                         class="w-full rounded-sm transition-all duration-200 min-h-[6px]"
-                        :class="selectedDay === day.date
-                          ? 'bg-accent shadow-[0_0_0_2px_rgb(var(--t-bg)),0_0_0_3px] shadow-accent/60'
-                          : 'bg-accent/45 group-hover:bg-accent/70'"
+                        :class="selectedDay === day.date ? currentSourceTab.barSelectedClass : currentSourceTab.barClass"
                         :style="{ height: `${Math.max(day.pct, 6)}%` }"
                       />
                     </div>
                     <span
                       class="text-[9px] truncate w-full text-center leading-none"
-                      :class="selectedDay === day.date ? 'text-accent font-medium' : 'text-t-muted'"
+                      :class="selectedDay === day.date ? `${currentSourceTab.totalAccent} font-medium` : 'text-t-muted'"
                     >
                       {{ day.date.slice(5) }}
                     </span>
@@ -598,7 +640,7 @@ watch(
                       <p class="text-sm text-t-text truncate group-hover:text-accent transition-colors">{{ row.title }}</p>
                       <p class="text-[10px] text-t-muted font-mono truncate">{{ row.projectPath }}</p>
                     </div>
-                    <span class="text-sm font-semibold tabular-nums text-accent shrink-0">{{ formatTokenCount(row.totalTokens) }}</span>
+                    <span class="text-sm font-semibold tabular-nums shrink-0" :class="currentSourceTab.totalAccent">{{ formatTokenCount(row.totalTokens) }}</span>
                   </li>
                 </ul>
               </div>
@@ -608,7 +650,7 @@ watch(
             <!-- Model breakdown -->
             <section
               class="rounded-xl border bg-t-raised p-5 theme-transition"
-              :class="selectedDay ? 'border-accent/40' : 'border-t-border'"
+              :class="selectedDay ? currentSourceTab.selectedRing : 'border-t-border'"
             >
               <h3 class="text-sm font-semibold text-t-text mb-1">{{ modelSectionTitle }}</h3>
               <p class="text-xs text-t-muted mb-4">{{ modelSectionHint }}</p>
@@ -623,7 +665,8 @@ watch(
                   </div>
                   <div class="h-2 rounded-full bg-t-bg overflow-hidden">
                     <div
-                      class="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent transition-all duration-500"
+                      class="h-full rounded-full bg-gradient-to-r transition-all duration-500"
+                      :class="modelBarClass"
                       :style="{ width: `${row.pct}%` }"
                     />
                   </div>
@@ -636,6 +679,19 @@ watch(
               </ul>
             </section>
           </div>
+
+          <!-- Activity profile (Codex-style) between daily chart and top sessions -->
+          <UsageActivityPanel
+            ref="activityPanelRef"
+            :activity="activity"
+            :totals="active.totals"
+            :by-day="allChartDays"
+            :estimated="active.estimated"
+            :selected-day="selectedDay"
+            :source="sourceTab"
+            :source-tab="currentSourceTab"
+            @select-day="onActivitySelectDay"
+          />
 
           <!-- Top sessions -->
           <section class="rounded-xl border border-t-border bg-t-raised overflow-hidden theme-transition">
@@ -675,7 +731,7 @@ watch(
                         </div>
                       </div>
                     </td>
-                    <td class="px-3 py-3 text-right font-semibold tabular-nums text-accent">{{ formatTokenCount(row.totalTokens) }}</td>
+                    <td class="px-3 py-3 text-right font-semibold tabular-nums" :class="currentSourceTab.totalAccent">{{ formatTokenCount(row.totalTokens) }}</td>
                     <td class="px-3 py-3 text-right tabular-nums text-t-muted hidden sm:table-cell">{{ formatTokenCount(row.inputTokens) }}</td>
                     <td class="px-3 py-3 text-right tabular-nums text-t-muted hidden sm:table-cell">{{ formatTokenCount(row.outputTokens) }}</td>
                     <td class="px-3 py-3 text-right tabular-nums text-t-muted hidden md:table-cell">{{ formatTokenCount(row.cacheReadTokens + row.cacheCreationTokens) }}</td>

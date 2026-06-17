@@ -36,13 +36,25 @@ export function formatSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-/** @param {number} n */
-export function formatTokenCount(n) {
+/** @param {number} n @param {'zh'|'en'} [locale] */
+export function formatTokenCountLocale(n, locale = 'zh') {
   const v = Number(n) || 0
+  if (locale === 'zh') {
+    if (v >= 100_000_000) return `${(v / 100_000_000).toFixed(2)}亿`
+    if (v >= 10_000) return `${(v / 10_000).toFixed(1)}万`
+    if (v >= 1_000) return `${(v / 1_000).toFixed(2)}千`
+    return String(v)
+  }
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
   if (v >= 10_000) return `${(v / 1_000).toFixed(1)}K`
   if (v >= 1_000) return `${(v / 1_000).toFixed(2)}K`
   return String(v)
+}
+
+/** @param {number} n */
+export function formatTokenCount(n) {
+  const tag = resolveLocaleTag()
+  return formatTokenCountLocale(n, tag.startsWith('zh') ? 'zh' : 'en')
 }
 
 /** @param {number} n */

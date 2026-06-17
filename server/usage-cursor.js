@@ -1,6 +1,10 @@
 import fs from 'fs'
 
-import { buildDayCompare, ensureDayModel, finalizeByDay, pushSessionDay, toLocalDateKey } from './usage-shared.js'
+import { buildDayCompare, ensureDayModel, finalizeByDay, pushSessionDay, toLocalDateKey, toLocalDateKeyWithFallback } from './usage-shared.js'
+import { buildActivityProfile } from './usage-activity.js'
+import { aggregateTopPlugins } from './usage-plugins.js'
+import { aggregateTopSkills } from './usage-skills.js'
+import { aggregateTopTools } from './usage-tools.js'
 
 /** 与 tokenuse 等工具类似的粗略估算：约 4 字符 ≈ 1 token */
 const CHARS_PER_TOKEN = 4
@@ -61,43 +65,71 @@ function emptyUsage() {
   }
 }
 
-/** @param {string} filePath */
-export function extractEstimatedUsageFromCursorFile(filePath) {
-  const totals = emptyUsage()
-  let userChars = 0
-  let outputChars = 0
-  let assistantLines = 0
-  let userLines = 0
-
-  try {
-    const content = fs.readFileSync(filePath, 'utf8')
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-      let row
-      try {
-        row = JSON.parse(trimmed)
-      } catch {
-        continue
-      }
-      const role = row.role || row.type
-      if (role === 'user') {
-        userLines += 1
-        userChars += extractCursorUserText(row.message?.content).length
-      } else if (role === 'assistant') {
-        assistantLines += 1
-        outputChars += extractCursorAssistantText(row.message?.content).length
-      }
-    }
-  } catch {
-    return totals
+/** @param {unknown} content */
+function extractCursorTimestamp(content) {
+  let text = ''
+  if (typeof content === 'string') text = content
+  else if (Array.isArray(content)) {
+    text = content
+      .filter((c) => c?.type === 'text')
+      .map((c) => c.text || '')
+      .join('\n')
   }
+  const m = text.match(/<timestamp>\s*([\s\S]*?)\s*<\/timestamp>/i)
+  return m?.[1]?.trim() || null
+}
 
-  totals.userTurnCount = userLines
-  totals.turnCount = assistantLines
-  totals.inputTokens = Math.ceil(userChars / CHARS_PER_TOKEN)
-  totals.outputTokens = Math.ceil(outputChars / CHARS_PER_TOKEN)
-  totals.totalTokens = totals.inputTokens + totals.outputTokens
+/** @param {Record<string, { userChars: number, outputChars: number, assistantLines: number, userLines: number }>} byDay */
+function ensureDayBucket(byDay, day) {
+  if (!byDay[day]) {
+    byDay[day] = { userChars: 0, outputChars: 0, assistantLines: 0, userLines: 0 }
+  }
+  return byDay[day]
+}
+
+/** @param {Record<string, { userChars: number, outputChars: number, assistantLines: number, userLines: number }>} byDay @param {string|null} day @param {'user'|'assistant'} kind @param {number} chars */
+function addCursorDayChars(byDay, day, kind, chars) {
+  if (!day || chars <= 0) return
+  const bucket = ensureDayBucket(byDay, day)
+  if (kind === 'user') {
+    bucket.userChars += chars
+    bucket.userLines += 1
+  } else {
+    bucket.outputChars += chars
+    bucket.assistantLines += 1
+  }
+}
+
+/** @param {Record<string, { userChars: number, outputChars: number, assistantLines: number, userLines: number }>} byDay */
+function cursorUsageFromDayBuckets(byDay) {
+  const totals = emptyUsage()
+  for (const [day, bucket] of Object.entries(byDay)) {
+    const inputTokens = Math.ceil(bucket.userChars / CHARS_PER_TOKEN)
+    const outputTokens = Math.ceil(bucket.outputChars / CHARS_PER_TOKEN)
+    const totalTokens = inputTokens + outputTokens
+    if (totalTokens <= 0) continue
+
+    totals.userTurnCount += bucket.userLines
+    totals.turnCount += bucket.assistantLines
+    totals.inputTokens += inputTokens
+    totals.outputTokens += outputTokens
+    totals.totalTokens += totalTokens
+
+    totals.byDay[day] = {
+      date: day,
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      turnCount: bucket.assistantLines,
+      byModel: {},
+    }
+    const model = 'Cursor (estimated)'
+    const m = ensureDayModel(totals.byDay[day], model)
+    m.inputTokens += inputTokens
+    m.outputTokens += outputTokens
+    m.totalTokens += totalTokens
+    m.turnCount += bucket.assistantLines
+  }
 
   if (totals.totalTokens > 0) {
     totals.byModel = {
@@ -116,6 +148,69 @@ export function extractEstimatedUsageFromCursorFile(filePath) {
   return totals
 }
 
+/** @param {string} filePath @param {number|string|Date|null|undefined} [fallbackTs] */
+export function extractEstimatedUsageFromCursorFile(filePath, fallbackTs) {
+  /** @type {Record<string, { userChars: number, outputChars: number, assistantLines: number, userLines: number }>} */
+  const byDay = {}
+  let lastDay = toLocalDateKey(fallbackTs)
+  let hasMessageTimestamp = false
+
+  try {
+    const content = fs.readFileSync(filePath, 'utf8')
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      let row
+      try {
+        row = JSON.parse(trimmed)
+      } catch {
+        continue
+      }
+      const role = row.role || row.type
+      const messageContent = row.message?.content
+
+      if (role === 'user') {
+        const ts = extractCursorTimestamp(messageContent)
+        const day = toLocalDateKeyWithFallback(ts, lastDay || fallbackTs)
+        if (ts) {
+          hasMessageTimestamp = true
+          lastDay = day
+        } else if (day) {
+          lastDay = day
+        }
+        const chars = extractCursorUserText(messageContent).length
+        addCursorDayChars(byDay, day, 'user', chars)
+      } else if (role === 'assistant') {
+        const day = lastDay || toLocalDateKey(fallbackTs)
+        const chars = extractCursorAssistantText(messageContent).length
+        addCursorDayChars(byDay, day, 'assistant', chars)
+      }
+    }
+  } catch {
+    return emptyUsage()
+  }
+
+  if (!Object.keys(byDay).length) {
+    return emptyUsage()
+  }
+
+  if (!hasMessageTimestamp && fallbackTs) {
+    const fallbackDay = toLocalDateKey(fallbackTs)
+    if (fallbackDay) {
+      const merged = { userChars: 0, outputChars: 0, assistantLines: 0, userLines: 0 }
+      for (const bucket of Object.values(byDay)) {
+        merged.userChars += bucket.userChars
+        merged.outputChars += bucket.outputChars
+        merged.assistantLines += bucket.assistantLines
+        merged.userLines += bucket.userLines
+      }
+      return cursorUsageFromDayBuckets({ [fallbackDay]: merged })
+    }
+  }
+
+  return cursorUsageFromDayBuckets(byDay)
+}
+
 /** @param {object[]} sessions */
 export function aggregateCursorUsage(sessions) {
   const cursorSessions = sessions.filter((s) => s.source === 'cursor' && s.filePath)
@@ -124,7 +219,7 @@ export function aggregateCursorUsage(sessions) {
   const topSessions = []
 
   for (const session of cursorSessions) {
-    const usage = extractEstimatedUsageFromCursorFile(session.filePath)
+    const usage = extractEstimatedUsageFromCursorFile(session.filePath, session.updatedAt)
     if (usage.totalTokens === 0) continue
 
     combined.inputTokens += usage.inputTokens
@@ -133,8 +228,7 @@ export function aggregateCursorUsage(sessions) {
     combined.turnCount += usage.turnCount
     combined.userTurnCount += usage.userTurnCount
 
-    const day = toLocalDateKey(session.updatedAt)
-    if (day) {
+    for (const [day, data] of Object.entries(usage.byDay)) {
       if (!combined.byDay[day]) {
         combined.byDay[day] = {
           date: day,
@@ -146,17 +240,17 @@ export function aggregateCursorUsage(sessions) {
         }
       }
       const d = combined.byDay[day]
-      d.inputTokens += usage.inputTokens
-      d.outputTokens += usage.outputTokens
-      d.totalTokens += usage.totalTokens
-      d.turnCount += usage.turnCount
+      d.inputTokens += data.inputTokens
+      d.outputTokens += data.outputTokens
+      d.totalTokens += data.totalTokens
+      d.turnCount += data.turnCount
 
       const model = 'Cursor (estimated)'
       const m = ensureDayModel(d, model)
-      m.inputTokens += usage.inputTokens
-      m.outputTokens += usage.outputTokens
-      m.totalTokens += usage.totalTokens
-      m.turnCount += usage.turnCount
+      m.inputTokens += data.inputTokens
+      m.outputTokens += data.outputTokens
+      m.totalTokens += data.totalTokens
+      m.turnCount += data.turnCount
 
       pushSessionDay(combined.sessionsByDay, day, {
         sessionId: session.id,
@@ -165,12 +259,12 @@ export function aggregateCursorUsage(sessions) {
         kind: session.kind,
         source: session.source,
         updatedAt: session.updatedAt || 0,
-        turnCount: usage.turnCount,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
+        turnCount: data.turnCount,
+        inputTokens: data.inputTokens,
+        outputTokens: data.outputTokens,
         cacheReadTokens: 0,
         cacheCreationTokens: 0,
-        totalTokens: usage.totalTokens,
+        totalTokens: data.totalTokens,
       })
     }
 
@@ -217,6 +311,16 @@ export function aggregateCursorUsage(sessions) {
     sessionCount: cursorSessions.length,
     sessionsWithUsage: topSessions.length,
     dayCompare: buildDayCompare(byDay),
+    activity: buildActivityProfile({
+      byDay,
+      byModel,
+      topSessions,
+      topPlugins: aggregateTopPlugins(cursorSessions, 'cursor'),
+      topSkills: aggregateTopSkills(cursorSessions, 'cursor'),
+      topTools: aggregateTopTools(cursorSessions, 'cursor'),
+      sessionCount: cursorSessions.length,
+      estimated: true,
+    }),
     totals: {
       inputTokens: combined.inputTokens,
       outputTokens: combined.outputTokens,

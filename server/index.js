@@ -9,8 +9,10 @@ import {
   decodeProjectSlug,
 } from './scanner.js'
 import { getCursorDir } from './scanner-cursor.js'
+import { getCodexDir } from './scanner-codex.js'
 import { parseTranscript, searchInTranscript } from './parser.js'
 import { parseCursorTranscript, searchInCursorTranscript } from './parser-cursor.js'
+import { parseCodexTranscript, searchInCodexTranscript } from './parser-codex.js'
 import { messagesToMarkdown } from './export.js'
 import { openBrowser } from './open-browser.js'
 import { buildUsageReport } from './usage.js'
@@ -68,6 +70,9 @@ function parseSessionFile(session) {
   if (session.source === 'cursor') {
     return parseCursorTranscript(session.filePath)
   }
+  if (session.source === 'codex') {
+    return parseCodexTranscript(session.filePath)
+  }
   return parseTranscript(session.filePath)
 }
 
@@ -75,11 +80,14 @@ function searchSessionFile(session, query) {
   if (session.source === 'cursor') {
     return searchInCursorTranscript(session.filePath, query)
   }
+  if (session.source === 'codex') {
+    return searchInCodexTranscript(session.filePath, query)
+  }
   return searchInTranscript(session.filePath, query)
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, claudeDir: getClaudeDir(), cursorDir: getCursorDir() })
+  res.json({ ok: true, claudeDir: getClaudeDir(), cursorDir: getCursorDir(), codexDir: getCodexDir() })
 })
 
 app.get('/api/config', (_req, res) => {
@@ -117,6 +125,7 @@ app.get('/api/sessions', (req, res) => {
       projects,
       claudeDir: getClaudeDir(),
       cursorDir: getCursorDir(),
+      codexDir: getCodexDir(),
     })
   } catch (err) {
     console.error(err)

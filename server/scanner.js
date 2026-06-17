@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { scanCursorSessions } from './scanner-cursor.js'
+import { scanCodexSessions } from './scanner-codex.js'
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude')
 const SESSIONS_DIR = path.join(CLAUDE_DIR, 'sessions')
@@ -188,8 +189,8 @@ export function scanClaudeSessions() {
 }
 
 /**
- * 合并 Claude Code + Cursor 会话
- * @param {{ source?: 'all'|'claude'|'cursor' }} options
+ * 合并 Claude Code + Cursor + Codex 会话
+ * @param {{ source?: 'all'|'claude'|'cursor'|'codex' }} options
  */
 export function scanAllSessions(options = {}) {
   const { source = 'all' } = options
@@ -200,6 +201,9 @@ export function scanAllSessions(options = {}) {
   }
   if (source === 'all' || source === 'cursor') {
     sessions = sessions.concat(scanCursorSessions())
+  }
+  if (source === 'all' || source === 'codex') {
+    sessions = sessions.concat(scanCodexSessions())
   }
 
   sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))

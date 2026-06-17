@@ -2,9 +2,9 @@
 
 # claude-history-viewer
 
-**轻量级本地 Web 查看器，用于浏览 Claude Code 与 Cursor 会话历史。**
+**轻量级本地 Web 查看器，用于浏览 Claude Code、Cursor 与 Codex 会话历史。**
 
-从 `~/.claude` 与 `~/.cursor` 读取对话记录，支持浏览、搜索与导出 — **完全离线**，无云端、无遥测。
+从 `~/.claude`、`~/.cursor` 与 `~/.codex` 读取对话记录，支持浏览、搜索与导出 — **完全离线**，无云端、无遥测。
 
 [![Stars](https://img.shields.io/github/stars/wonderomg/claude-history-viewer?style=flat&color=yellow)](https://github.com/wonderomg/claude-history-viewer/stargazers)
 ![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
@@ -22,7 +22,7 @@
 
 ## 快速开始
 
-需要 **Node.js 18+**。本机可选已有 `~/.claude` / `~/.cursor` 历史数据。
+需要 **Node.js 18+**。本机可选已有 `~/.claude` / `~/.cursor` / `~/.codex` 历史数据。
 
 ### 从 npm 使用（推荐）
 
@@ -64,7 +64,7 @@ npm run build && npm start
 
 ## 免责声明
 
-独立开源项目，与 **Anthropic**、**Cursor** 无官方关系；相关名称为各自商标。仅只读本机历史文件。
+独立开源项目，与 **Anthropic**、**Cursor**、**OpenAI** 无官方关系；相关名称为各自商标。仅只读本机历史文件。
 
 ---
 
@@ -72,10 +72,11 @@ npm run build && npm start
 
 | 功能 | 说明 |
 |------|------|
-| 双来源 | 侧栏 **全部 / Claude Code / Cursor**，搜索随来源过滤 |
+| 三来源 | 侧栏 **全部 / Claude Code / Cursor / Codex**，搜索随来源过滤 |
 | 会话列表 | 按项目筛选、Sub-agent 树形展开 |
 | 对话渲染 | 用户 / Markdown / Thinking / Tool Call & Result |
 | 搜索 | 跨会话 + 会话内（高亮、`上一处/下一处`、回车定位） |
+| 用量面板 | Token 统计、活动热力图、活动洞察、常用工具/插件/Skill/项目（Claude 与 Codex 为 JSONL 真实 usage；Cursor 为估算） |
 | 其他 | 原始 JSONL、导出 Markdown、浅色/深色/护眼主题、中/英文界面 |
 
 ---
@@ -89,8 +90,11 @@ npm run build && npm start
 | Claude Code | `.../{sessionId}/subagents/*.jsonl` | Sub-agent |
 | Cursor | `~/.cursor/projects/{slug}/agent-transcripts/{id}/{id}.jsonl` | Agent 对话 |
 | Cursor | `.../subagents/*.jsonl` | Sub-agent |
+| Codex | `~/.codex/sessions/**/rollout-*.jsonl` | Codex CLI rollout 对话 |
 
 项目 slug（如 `-Users-you-code-project`）会在界面中还原为可读路径。
+
+**Codex 数据目录**：默认为 `~/.codex`。若 Codex 数据在其他位置，可通过环境变量 `CODEX_HOME` 指定。
 
 ---
 
@@ -144,18 +148,19 @@ theme: eye     # 界面主题：light | dark | eye（护眼豆沙绿）
 | `PORT` | `3747` | API / 生产静态服务端口 |
 | `VITE_PORT` | `5173` | Vite 开发端口 |
 | `NO_OPEN_BROWSER` | — | `1` 禁用自动打开浏览器 |
+| `CODEX_HOME` | `~/.codex` | Codex 数据目录（`sessions/` 下的 rollout JSONL） |
 
 ---
 
 ## 本地 API
 
-`GET /api/health` · `GET /api/config` · `GET /api/sessions?source=` · `GET /api/sessions/:id` · `GET /api/sessions/:id/search?q=` · `GET /api/sessions/:id/raw` · `GET /api/sessions/:id/export` · `GET /api/search?q=&source=`
+`GET /api/health` · `GET /api/config` · `GET /api/sessions?source=` · `GET /api/sessions/:id` · `GET /api/sessions/:id/search?q=` · `GET /api/sessions/:id/raw` · `GET /api/sessions/:id/export` · `GET /api/search?q=&source=` · `GET /api/usage`
 
 ---
 
 ## 隐私与安全
 
-- 仅读取 `~/.claude`、`~/.cursor`，不上传云端
+- 仅读取 `~/.claude`、`~/.cursor`、`~/.codex`，不上传云端
 - 对话中可能含密钥与内部信息，界面会如实展示
 - API 无鉴权，默认仅本机；勿暴露到不可信网络
 
@@ -166,14 +171,14 @@ theme: eye     # 界面主题：light | dark | eye（护眼豆沙绿）
 | 问题 | 处理 |
 |------|------|
 | 无法连接后端 | 确认已运行 `npx -y claudecode-history-viewer` 或 `npm start`，端口 `3747` 未被占用 |
-| 列表为空 | 确认对应目录存在且已有工具产生的历史 |
+| 列表为空 | 确认对应目录存在且已有工具产生的历史；Codex 请检查 `~/.codex/sessions/**/rollout-*.jsonl` |
 | 搜索/高亮不准 | 会话内搜索按 **回车** 或等渲染后用 ◀ ▶ |
 
 ---
 
 ## 局限性
 
-仅支持 Claude Code 与 Cursor；Web 界面；无 Token 统计、实时监听、会话增删改。
+支持 Claude Code、Cursor 与 Codex；Web 界面；无实时文件监听、会话增删改。用量面板中 Cursor 为 transcript 长度估算，Claude Code 与 Codex 优先使用 JSONL 中的 token 字段。
 
 ---
 

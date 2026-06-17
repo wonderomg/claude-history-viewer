@@ -29,6 +29,7 @@ const sourceOptions = computed(() => [
   { value: 'all', label: t('sidebar.sourceAll') },
   { value: 'claude', label: 'Claude Code' },
   { value: 'cursor', label: 'Cursor' },
+  { value: 'codex', label: 'Codex' },
 ])
 
 /** 主会话 id → true 表示 Sub-agent 已收起；默认无记录 = 展开 */

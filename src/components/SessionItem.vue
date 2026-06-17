@@ -29,8 +29,12 @@ defineEmits(['select'])
     <div class="flex items-center gap-1.5 min-w-0">
       <span
         class="text-[9px] px-1 rounded shrink-0 font-medium"
-        :class="session.source === 'cursor' ? 'bg-sky-500/20 text-sky-400' : 'bg-accent/15 text-accent'"
-      >{{ session.source === 'cursor' ? 'CR' : 'CC' }}</span>
+        :class="session.source === 'cursor'
+          ? 'bg-sky-500/20 text-sky-400'
+          : session.source === 'codex'
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'bg-accent/15 text-accent'"
+      >{{ session.source === 'cursor' ? 'CR' : session.source === 'codex' ? 'CX' : 'CC' }}</span>
       <span v-if="isSub" class="text-[10px] text-purple-400 shrink-0 font-medium">SUB</span>
       <span v-else-if="session.kind === 'subagent'" class="text-[10px] text-purple-400 shrink-0">SUB</span>
       <span class="text-sm font-medium truncate">{{ session.title }}</span>

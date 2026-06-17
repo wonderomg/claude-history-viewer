@@ -12,6 +12,11 @@ export function toLocalDateKey(ts) {
   return `${y}-${m}-${day}`
 }
 
+/** @param {string|number|Date|null|undefined} ts @param {string|number|Date|null|undefined} [fallback] */
+export function toLocalDateKeyWithFallback(ts, fallback) {
+  return toLocalDateKey(ts) || toLocalDateKey(fallback) || null
+}
+
 /** @param {object} dayBucket */
 export function ensureDayModel(dayBucket, model) {
   if (!dayBucket.byModel) dayBucket.byModel = {}
@@ -35,6 +40,7 @@ export function mergeModelStats(target, source) {
   target.outputTokens += source.outputTokens || 0
   target.cacheReadTokens += source.cacheReadTokens || 0
   target.cacheCreationTokens += source.cacheCreationTokens || 0
+  target.reasoningOutputTokens = (target.reasoningOutputTokens || 0) + (source.reasoningOutputTokens || 0)
   target.totalTokens += source.totalTokens || 0
   target.turnCount += source.turnCount || 0
 }

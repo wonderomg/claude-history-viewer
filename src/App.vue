@@ -24,6 +24,7 @@ const listQuery = ref('')
 const hideSubagents = ref(false)
 const sourceFilter = ref('claude')
 const cursorDir = ref('')
+const codexDir = ref('')
 const searchQuery = ref('')
 const searchHits = ref([])
 const searchMatches = ref([])
@@ -51,15 +52,18 @@ const previousAppView = ref(null)
 const activeDataDir = computed(() => {
   if (sourceFilter.value === 'cursor') return cursorDir.value
   if (sourceFilter.value === 'claude') return claudeDir.value
-  if (claudeDir.value && cursorDir.value) {
-    return `${claudeDir.value} · ${cursorDir.value}`
-  }
-  return claudeDir.value || cursorDir.value
+  if (sourceFilter.value === 'codex') return codexDir.value
+  const parts = [claudeDir.value, cursorDir.value, codexDir.value].filter(Boolean)
+  return parts.join(' · ')
 })
 
 const activeDataDirTitle = computed(() => {
-  if (sourceFilter.value === 'all' && claudeDir.value && cursorDir.value) {
-    return `Claude: ${claudeDir.value}\nCursor: ${cursorDir.value}`
+  if (sourceFilter.value === 'all') {
+    const lines = []
+    if (claudeDir.value) lines.push(`Claude: ${claudeDir.value}`)
+    if (cursorDir.value) lines.push(`Cursor: ${cursorDir.value}`)
+    if (codexDir.value) lines.push(`Codex: ${codexDir.value}`)
+    return lines.join('\n') || activeDataDir.value
   }
   return activeDataDir.value
 })
@@ -75,6 +79,7 @@ async function loadSessions() {
     projects.value = data.projects || []
     claudeDir.value = data.claudeDir || ''
     cursorDir.value = data.cursorDir || ''
+    codexDir.value = data.codexDir || ''
   } catch (e) {
     error.value = t('app.backendError')
     console.error(e)
@@ -280,7 +285,7 @@ async function openSessionFromDashboard(payload) {
   listQuery.value = ''
   projectFilter.value = ''
 
-  if (source === 'cursor' || source === 'claude') {
+  if (source === 'cursor' || source === 'claude' || source === 'codex') {
     sourceFilter.value = source
   }
 
@@ -466,8 +471,12 @@ onUnmounted(() => {
       >
         <span
           class="text-[10px] px-1 rounded mr-1"
-          :class="r.source === 'cursor' ? 'bg-sky-500/20 text-sky-400' : 'bg-accent/20 text-accent'"
-        >{{ r.source === 'cursor' ? 'Cursor' : 'Claude' }}</span>
+          :class="r.source === 'cursor'
+            ? 'bg-sky-500/20 text-sky-400'
+            : r.source === 'codex'
+              ? 'bg-emerald-500/20 text-emerald-400'
+              : 'bg-accent/20 text-accent'"
+        >{{ r.source === 'cursor' ? 'Cursor' : r.source === 'codex' ? 'Codex' : 'Claude' }}</span>
         <span v-if="r.kind === 'subagent'" class="text-purple-400 text-xs mr-1">SUB</span>
         <span class="text-t-text">{{ r.title }}</span>
         <span class="text-t-muted text-xs ml-2">{{ r.projectPath }}</span>

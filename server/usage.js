@@ -1,6 +1,11 @@
 import fs from 'fs'
 import { aggregateCursorUsage } from './usage-cursor.js'
-import { buildDayCompare, ensureDayModel, finalizeByDay, mergeModelStats, pushSessionDay, toLocalDateKey } from './usage-shared.js'
+import { aggregateCodexUsage } from './usage-codex.js'
+import { buildDayCompare, ensureDayModel, finalizeByDay, mergeModelStats, pushSessionDay, toLocalDateKeyWithFallback } from './usage-shared.js'
+import { buildActivityProfile } from './usage-activity.js'
+import { aggregateTopPlugins } from './usage-plugins.js'
+import { aggregateTopSkills } from './usage-skills.js'
+import { aggregateTopTools } from './usage-tools.js'
 
 /** @param {object} usage */
 function normalizeUsage(usage) {
@@ -18,8 +23,8 @@ function normalizeUsage(usage) {
   }
 }
 
-/** @param {string} filePath */
-export function extractUsageFromClaudeFile(filePath) {
+/** @param {string} filePath @param {number|string|Date|null|undefined} [fallbackTs] */
+export function extractUsageFromClaudeFile(filePath, fallbackTs) {
   /** @type {Map<string, { usage: ReturnType<typeof normalizeUsage>, model: string, timestamp: string }>} */
   const byMessageId = new Map()
 
@@ -51,7 +56,7 @@ export function extractUsageFromClaudeFile(filePath) {
     return emptyClaudeUsage()
   }
 
-  return aggregateTurns([...byMessageId.values()])
+  return aggregateTurns([...byMessageId.values()], fallbackTs)
 }
 
 function emptyClaudeUsage() {
@@ -68,8 +73,8 @@ function emptyClaudeUsage() {
   }
 }
 
-/** @param {{ usage: ReturnType<typeof normalizeUsage>, model: string, timestamp: string }[]} turns */
-function aggregateTurns(turns) {
+/** @param {{ usage: ReturnType<typeof normalizeUsage>, model: string, timestamp: string }[]} turns @param {number|string|Date|null|undefined} [fallbackTs] */
+function aggregateTurns(turns, fallbackTs) {
   const totals = emptyClaudeUsage()
   totals.turnCount = turns.length
 
@@ -101,7 +106,7 @@ function aggregateTurns(turns) {
     m.totalTokens += u.totalTokens
     m.turnCount += 1
 
-    const day = toLocalDateKey(turn.timestamp)
+    const day = toLocalDateKeyWithFallback(turn.timestamp, fallbackTs)
     if (day) {
       if (!totals.byDay[day]) {
         totals.byDay[day] = {
@@ -144,7 +149,7 @@ export function aggregateClaudeUsage(sessions) {
   const topSessions = []
 
   for (const session of claudeSessions) {
-    const usage = extractUsageFromClaudeFile(session.filePath)
+    const usage = extractUsageFromClaudeFile(session.filePath, session.updatedAt)
     if (usage.turnCount === 0) continue
 
     combined.inputTokens += usage.inputTokens
@@ -243,6 +248,16 @@ export function aggregateClaudeUsage(sessions) {
     sessionCount: claudeSessions.length,
     sessionsWithUsage: topSessions.length,
     dayCompare: buildDayCompare(byDay),
+    activity: buildActivityProfile({
+      byDay,
+      byModel,
+      topSessions,
+      topPlugins: aggregateTopPlugins(claudeSessions, 'claude'),
+      topSkills: aggregateTopSkills(claudeSessions, 'claude'),
+      topTools: aggregateTopTools(claudeSessions, 'claude'),
+      sessionCount: claudeSessions.length,
+      estimated: false,
+    }),
     totals: {
       inputTokens: combined.inputTokens,
       outputTokens: combined.outputTokens,
@@ -268,5 +283,6 @@ export function buildUsageReport(sessions) {
   return {
     claude: aggregateClaudeUsage(sessions),
     cursor: buildCursorUsageSummary(sessions),
+    codex: aggregateCodexUsage(sessions),
   }
 }
