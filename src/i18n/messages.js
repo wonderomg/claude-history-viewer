@@ -44,6 +44,7 @@ export const messages = {
       pickSessionHint: '主会话 · Sub-agent 均可查看',
       noMessages: '该会话没有可展示的消息',
       subagentLabel: '{source} · Sub-agent',
+      userNavLabel: '用户输入快速定位',
     },
     raw: {
       loading: '加载原始 JSONL…',
@@ -254,6 +255,7 @@ export const messages = {
       pickSessionHint: 'Main sessions and Sub-agents',
       noMessages: 'No messages to display in this session',
       subagentLabel: '{source} · Sub-agent',
+      userNavLabel: 'Jump to user messages',
     },
     raw: {
       loading: 'Loading raw JSONL…',

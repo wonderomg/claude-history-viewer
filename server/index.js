@@ -239,8 +239,19 @@ app.get('/api/search', (req, res) => {
 
 if (isProd) {
   const dist = path.join(__dirname, '..', 'dist')
-  app.use(express.static(dist))
+  app.use(
+    express.static(dist, {
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+          res.setHeader('Pragma', 'no-cache')
+          res.setHeader('Expires', '0')
+        }
+      },
+    })
+  )
   app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.sendFile(path.join(dist, 'index.html'))
   })
 }

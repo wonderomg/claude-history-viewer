@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 import RawJsonView from './RawJsonView.vue'
+import UserInputNavigator from './UserInputNavigator.vue'
 import { formatTime } from '../utils/format.js'
 import {
   scheduleScrollToMatchIndex,
@@ -383,18 +384,25 @@ const sessionLabel = computed(() => {
 
     <RawJsonView v-else-if="viewMode === 'raw'" :session-id="session.id" class="flex-1 min-h-0" />
 
-    <div v-else ref="chatRef" data-chat-scroll class="flex-1 overflow-y-auto px-4 md:px-8 py-6">
-      <MessageBubble
-        v-for="msg in messages"
-        :key="msg.id"
-        :message="msg"
-        :highlight="highlightId === msg.id"
-        :tools-only="toolsOnly"
-        :highlight-query="highlightQuery"
+    <div v-else class="flex-1 flex min-h-0 min-w-0">
+      <UserInputNavigator
+        :messages="messages"
+        :active-id="highlightId"
+        @select="scrollToMessage"
       />
-      <p v-if="messages.length === 0" class="text-center text-t-muted py-12">
-        {{ t('chat.noMessages') }}
-      </p>
+      <div ref="chatRef" data-chat-scroll class="flex-1 overflow-y-auto px-4 md:px-8 py-6 min-w-0">
+        <MessageBubble
+          v-for="msg in messages"
+          :key="msg.id"
+          :message="msg"
+          :highlight="highlightId === msg.id"
+          :tools-only="toolsOnly"
+          :highlight-query="highlightQuery"
+        />
+        <p v-if="messages.length === 0" class="text-center text-t-muted py-12">
+          {{ t('chat.noMessages') }}
+        </p>
+      </div>
     </div>
   </main>
 </template>
